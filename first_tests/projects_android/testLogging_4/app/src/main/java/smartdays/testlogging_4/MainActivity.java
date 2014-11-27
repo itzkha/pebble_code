@@ -41,7 +41,6 @@ public class MainActivity extends Activity {
         textView.setText("Waiting for logging data...");
 
         // Setup file
-
         try {
             File root = Environment.getExternalStorageDirectory();
             FileOutputStream f = new FileOutputStream(new File(root, "testCapture"));
