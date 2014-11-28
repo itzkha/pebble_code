@@ -22,36 +22,30 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
 
         textView = (TextView)findViewById(R.id.textView);
+//        intent = new Intent(this, PebbleLoggingIntentService.class);
         intent = new Intent(this, PebbleLoggingService.class);
 
-        if  (PebbleLoggingService.isRunning()) {
-            textView.setText("Waiting for logging data... Service started...");
-        }
-        else {
+//        if  (PebbleLoggingService.isRunning()) {
+//            textView.setText("Waiting for logging data... Service started...");
+//        }
+//        else {
             textView.setText("Waiting for logging data...");
-        }
+//        }
 
         final Button buttonStart = (Button) findViewById(R.id.buttonStart);
-        buttonStart.setEnabled(!PebbleLoggingService.isRunning());
         final Button buttonStop = (Button) findViewById(R.id.buttonStop);
-        buttonStop.setEnabled(PebbleLoggingService.isRunning());
 
         buttonStart.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 startService(intent);
                 textView.setText("Waiting for logging data... Service started...");
-                buttonStart.setEnabled(false);
-                buttonStop.setEnabled(true);
             }
         });
 
         buttonStop.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                buttonStop.setEnabled(false);
                 stopService(intent);
                 textView.setText("Waiting for logging data... Service stopped...");
-                buttonStart.setEnabled(true);
-                buttonStop.setEnabled(false);
             }
         });
     }
