@@ -25,6 +25,7 @@ import java.util.UUID;
  * Created by hector on 26/11/14.
  */
 public class PebbleLoggingService extends Service {
+
     private NotificationManager notificationManager;
     private int NOTIFICATION = R.string.local_service_started;
 
@@ -36,6 +37,7 @@ public class PebbleLoggingService extends Service {
 
     @Override
     public void onCreate() {
+        Log.d("PebbleLoggingService", "Creating...");
         notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
 
         // Display a notification about us starting.  We put an icon in the status bar.
