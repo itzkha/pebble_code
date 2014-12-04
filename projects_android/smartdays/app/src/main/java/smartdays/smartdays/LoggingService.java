@@ -14,6 +14,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import com.getpebble.android.kit.PebbleKit;
+import com.getpebble.android.kit.util.PebbleDictionary;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -68,7 +69,20 @@ public class LoggingService extends Service {
         } catch (IOException ioe) {
             Log.d("SmartDAYS", "Error creating file...");
         }
+/*
+        PebbleKit.registerReceivedDataHandler(this, new PebbleKit.PebbleDataReceiver(Constants.WATCHAPP_UUID) {
+            @Override
+            public void receiveData(final Context context, final int transactionId, final PebbleDictionary data) {
+                Log.d("SmartDAYS", "Received value=" + data.getInteger(Constants.START_STOP_KEY));
+                PebbleKit.sendAckToPebble(getApplicationContext(), transactionId);
 
+                if (data.getInteger(Constants.START_STOP_KEY) == Constants.STOP_MESSAGE) {
+                    if (LoggingService.isRunning()) {
+                        stopSelf();
+                    }
+                }
+            }
+        });*/
         running = false;
     }
 

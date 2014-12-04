@@ -79,15 +79,13 @@ phone[["xyz"]] <- -xyz
 
 #--------------------------------------------------------------------------------------------------
 par(oma=c(0,0,0,0), mar=c(3,2,1,1), mfrow=c(2,1))
-plot(pebble$xyz[,1], type="l", col="red", ylim=c(-4000, 4000), xlim=c(390, 800))
+plot(pebble$xyz[,1], type="l", col="red", ylim=c(-4000, 4000))
 lines(pebble$xyz[,2], col="green")
 lines(pebble$xyz[,3], col="blue")
-abline(v=396)
 
-plot(phone$xyz[,1], type="l", col="red", ylim=c(-4000, 4000), xlim=c(398, 800))
+plot(phone$xyz[,1], type="l", col="red", ylim=c(-4000, 4000))
 lines(phone$xyz[,2], col="green")
 lines(phone$xyz[,3], col="blue")
-abline(v=445)
 
 plot(phone$timestamp, col="red", ylim=c(min(min(pebble$timestamp), min(phone$timestamp)), max(max(phone$timestamp), max(pebble$timestamp))))
 points(pebble$timestamp, col="blue")

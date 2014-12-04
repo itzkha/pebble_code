@@ -14,4 +14,9 @@ public class Constants {
     public static final int PACKET_SIZE = 14;                                           // long + short + short + short
     public static final int TOO_FREQUENT_MEASURES = 16000000;                           // 16 mS
 
+    public static final int START_STOP_KEY = 7;
+    public static final int START_MESSAGE = 5;
+    public static final int STOP_MESSAGE = 12;
+
+
 }
