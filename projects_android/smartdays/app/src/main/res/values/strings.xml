@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">smartdays</string>
+    <string name="action_settings">Settings</string>
+    <string name="local_service_started">Pebble logging service started</string>
+    <string name="local_service_stopped">Pebble logging service stopped</string>
+    <string name="local_service_label">Pebble logging</string>
+</resources>

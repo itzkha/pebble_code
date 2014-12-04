@@ -1,0 +1,17 @@
+{
+  "uuid": "f3cdf03e-a639-4196-88a0-51fe502ab3d4",
+  "shortName": "smartdays",
+  "longName": "smartdays",
+  "companyName": "MakeAwesomeHappen",
+  "versionCode": 1,
+  "versionLabel": "1.0",
+  "watchapp": {
+    "watchface": false
+  },
+  "appKeys": {
+    "dummy": 0
+  },
+  "resources": {
+    "media": []
+  }
+}

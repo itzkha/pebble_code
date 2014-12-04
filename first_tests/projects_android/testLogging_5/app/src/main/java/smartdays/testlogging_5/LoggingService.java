@@ -63,7 +63,7 @@ public class LoggingService extends Service {
             // Create the file
             bufferOutPebble = new BufferedOutputStream(new FileOutputStream(new File(root, "testPebbleAccel")));
             bufferOutPhone = new BufferedOutputStream(new FileOutputStream(new File(root, "testPhoneAccel")));
-            Log.d("PebbleLoggingService", "File testCapture created...");
+            Log.d("PebbleLoggingService", "Files created...");
 
         } catch (IOException ioe) {
             Log.d("PebbleLoggingService", "Error creating file...");
@@ -76,7 +76,7 @@ public class LoggingService extends Service {
         Log.i("LocalService", "Received start id " + startId + ": " + intent);
 
         if (!isRunning()) {
-            PebbleKit.registerDataLogReceiver(this, dataloggingReceiver);
+            //PebbleKit.registerDataLogReceiver(this, dataloggingReceiver);
             startLoggingPebble();
             startLoggingPhone();
             running = true;
