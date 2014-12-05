@@ -10,9 +10,13 @@
 #define BUFFER_SIZE_BYTES sizeof(uint64_t)+(3*BUFFER_SIZE*sizeof(int16_t))
 #define PACKETS_PER_SESSION 10
 
-#define START_STOP_KEY 7
-#define START_MESSAGE 5
-#define STOP_MESSAGE 12
+#define COMMAND_KEY 0xcafebabe
+#define START_COMMAND 5
+#define STOP_COMMAND 12
+#define TIMESTAMP_COMMAND 17
+
+#define TIMESTAMP_KEY 0xdeadbeef
+#define N_SYNC 5
 
 static Window *s_main_window;
 static TextLayer *s_output_layer;
@@ -23,7 +27,6 @@ static char s_message_buffer[64];
 
 static DataLoggingSessionRef s_log_ref;
 static DataLoggingResult result = DATA_LOGGING_SUCCESS;
-static bool s_is_logging = false;
 static int counter_packet = 0;
 static int packets_sent = 0;
 
@@ -34,11 +37,24 @@ typedef struct packet {
 
 static accel_packet to_send;
 
-static const uint32_t MESSAGE_DATA_KEY = 0xcafebabe;
 DictionaryIterator iter;
 DictionaryIterator* p_iter = &iter;
+static int current_command;
+
+static bool timeout = false;
+static int8_t sync_counter = 0;
 
 
+
+static void set_timeout(void* data) {
+  timeout = true;
+}
+
+static void wait(int t) {
+  timeout = false;
+  app_timer_register(t, set_timeout, NULL);
+  while(!timeout);
+}
 
 static void data_handler(AccelRawData *data, uint32_t num_samples, uint64_t timestamp) {
   uint16_t i;
@@ -72,112 +88,88 @@ static void data_handler(AccelRawData *data, uint32_t num_samples, uint64_t time
 }
 
 static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
-  // Get the first pair
-  Tuple *t = dict_read_first(iterator);
-
-  // Process all pairs present
-  while (t != NULL) {
-    // Process this pair's key
-    switch (t->key) {
-      case START_STOP_KEY:
-        // Copy value and display
-        snprintf(s_app_message, sizeof(s_app_message), "Received '%s'", t->value->cstring);
-        //text_layer_set_text(s_output_layer, s_buffer);
-        break;
-    }
-
-    // Get next pair, if any
-    t = dict_read_next(iterator);
-  }
+  APP_LOG(APP_LOG_LEVEL_ERROR, "Message received!");
 }
 
 static void inbox_dropped_callback(AppMessageResult reason, void *context) {
   APP_LOG(APP_LOG_LEVEL_ERROR, "Message dropped!");
-  snprintf(s_app_message, sizeof(s_app_message), "%s", "Message dropped!");
 }
 
 void send_command(int command) {
+  time_t seconds;
+  uint16_t miliseconds;
+  time_ms(&seconds, &miliseconds);
+  uint64_t timestamp = (1000 * (uint64_t)seconds) + miliseconds;
+
+  current_command = command;
   app_message_outbox_begin(&p_iter);
-  dict_write_int8(p_iter, START_STOP_KEY, command);
+  dict_write_int8(p_iter, COMMAND_KEY, command);
+  dict_write_data(p_iter, TIMESTAMP_KEY, (uint8_t*)&timestamp, sizeof(timestamp));
   app_message_outbox_send();
 }
 
-void timer_callback(void *data) {
+void delayed_start(void *data) {
   // Send command to start logging
   text_layer_set_text(s_output_layer, "Resending request...");
-  send_command(START_MESSAGE);
+  send_command(START_COMMAND);
 }
 
 static void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResult reason, void *context) {
   APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox send failed!");
   
-  text_layer_set_text(s_output_layer, "Phone did not reply..." );
-  app_timer_register(1000, timer_callback, NULL);
+  switch (current_command) {
+    case START_COMMAND:
+      text_layer_set_text(s_output_layer, "Phone did not reply..." );
+      app_timer_register(1000, delayed_start, NULL);
+      break;
+    case STOP_COMMAND:
+      text_layer_set_text(s_output_layer, "I'll be back...");
+      window_stack_pop(true);
+      break;
+    case TIMESTAMP_COMMAND:
+      break;
+  }
 }
 
 static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Outbox send success!");
-  text_layer_set_text(s_output_layer, "Phone is OK" );
-//  snprintf(s_app_message, sizeof(s_app_message), "%s", "Outbox success!");
-
-  // Start logging if application sends ACK
-  s_log_ref = data_logging_create(DATA_LOG_TAG_ACCELEROMETER, DATA_LOGGING_BYTE_ARRAY, BUFFER_SIZE_BYTES, true);
-
-  // Subscribe to the accelerometer data service
-  accel_raw_data_service_subscribe(BUFFER_SIZE, data_handler);
-  // Choose update rate
-  accel_service_set_sampling_rate(ACCEL_SAMPLING_25HZ);
-    
-  text_layer_set_text(s_output_layer, "Logging..." );
-}
-
-static void toggle_logging() {
-  if (s_is_logging) {
-    //-------------------------------------------
-    app_message_outbox_begin(&p_iter);
-    dict_write_int8(p_iter, START_STOP_KEY, STOP_MESSAGE);
-    app_message_outbox_send();
-    //-------------------------------------------
-
-    s_is_logging = false;
-
-    // Stop accelerometer logging callbacks
-    accel_data_service_unsubscribe();
-    text_layer_set_text(s_output_layer, "Not logging.");
-
-    // Stop logging
-    data_logging_finish(s_log_ref);
-  }
-  else {
-    //-------------------------------------------
-    app_message_outbox_begin(&p_iter);
-    dict_write_int8(p_iter, START_STOP_KEY, START_MESSAGE);
-    app_message_outbox_send();
-    //-------------------------------------------
-
-    s_is_logging = true;
-
-    // Start logging
-    s_log_ref = data_logging_create(DATA_LOG_TAG_ACCELEROMETER, DATA_LOGGING_BYTE_ARRAY, BUFFER_SIZE_BYTES, true);
-
-    // Start generating data
-    // Use data service
-    // Subscribe to the accelerometer data service
-    accel_raw_data_service_subscribe(BUFFER_SIZE, data_handler);
-    // Choose update rate
-    accel_service_set_sampling_rate(ACCEL_SAMPLING_25HZ);
-    
-    text_layer_set_text(s_output_layer, "Logging..." );
+  
+  switch (current_command) {
+    case START_COMMAND:
+      // Send pebble timestamp
+      send_command(TIMESTAMP_COMMAND);
+      sync_counter = 0;
+      
+      text_layer_set_text(s_output_layer, "Phone is OK" );
+      // Start logging if application sends ACK
+      s_log_ref = data_logging_create(DATA_LOG_TAG_ACCELEROMETER, DATA_LOGGING_BYTE_ARRAY, BUFFER_SIZE_BYTES, true);
+      // Subscribe to the accelerometer data service
+      accel_raw_data_service_subscribe(BUFFER_SIZE, data_handler);
+      // Choose update rate
+      accel_service_set_sampling_rate(ACCEL_SAMPLING_25HZ);
+      text_layer_set_text(s_output_layer, "Logging..." );
+      break;
+    case STOP_COMMAND:
+      text_layer_set_text(s_output_layer, "I'll be back...");
+      window_stack_pop(true);
+      break;
+    case TIMESTAMP_COMMAND:
+      if (sync_counter < N_SYNC) {
+        sync_counter++;
+        send_command(TIMESTAMP_COMMAND);
+      }
+      break;
   }
 }
 
-static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
-  // Toggle Data Logging ON/OFF
-  toggle_logging();
+static void back_click_handler(ClickRecognizerRef recognizer, void *context) {
+// Try to stop the acquisition on the phone
+  text_layer_set_text(s_output_layer, "Trying to stop phone...");
+  send_command(STOP_COMMAND);
 }
 
 static void click_config_provider(void *context) {
-  window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler);
+  window_single_click_subscribe(BUTTON_ID_BACK, back_click_handler);
 }
 
 static void main_window_load(Window *window) {
@@ -209,7 +201,7 @@ static void init() {
   
   // Create main Window
   s_main_window = window_create();
-//  window_set_click_config_provider(s_main_window, click_config_provider);
+  window_set_click_config_provider(s_main_window, click_config_provider);
   window_set_window_handlers(s_main_window, (WindowHandlers) {
     .load = main_window_load,
     .unload = main_window_unload
@@ -217,17 +209,14 @@ static void init() {
   window_stack_push(s_main_window, true);
   
   // Send command to start logging
-  send_command(START_MESSAGE);
+  send_command(START_COMMAND);
 
 }
 
 static void deinit() {
   // Finish logging session
-  data_logging_finish(s_log_ref);
   accel_data_service_unsubscribe();
-  
-  // Try to stop the acquisition on the phone
-  send_command(START_MESSAGE);
+  data_logging_finish(s_log_ref);
   
   // Deregister callbacks
   app_message_deregister_callbacks();

@@ -14,7 +14,6 @@ import android.util.Log;
 import android.widget.Toast;
 
 import com.getpebble.android.kit.PebbleKit;
-import com.getpebble.android.kit.util.PebbleDictionary;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -36,17 +35,24 @@ public class LoggingService extends Service {
     private BufferedOutputStream bufferOutPhone = null;
     private PhoneDataBuffer phoneDataBuffer;
 
-    private PebbleKit.PebbleDataLogReceiver dataloggingReceiver;
+    private SmartDaysPebbleDataLogReceiver dataloggingReceiver;
 
     private static boolean running = false;
+    private static LoggingService instance;
+
 
     public static boolean isRunning() {
         return running;
     }
 
+    public static LoggingService getInstance() {
+        return instance;
+    }
+
     @Override
     public void onCreate() {
         Log.d("SmartDAYS", "Creating...");
+        instance = this;
         notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
@@ -63,26 +69,9 @@ public class LoggingService extends Service {
             phoneDataBuffer = new PhoneDataBuffer(1000);
             Log.d("SmartDAYS", "Files created...");
 
-            dataloggingReceiver = new SmartDaysPebbleDataLogReceiver(Constants.WATCHAPP_UUID, bufferOutPebble, bufferOutPhone, phoneDataBuffer);
-            phoneSensorEventListener = new PhoneSensorEventListener(phoneDataBuffer);
-
         } catch (IOException ioe) {
             Log.d("SmartDAYS", "Error creating file...");
         }
-/*
-        PebbleKit.registerReceivedDataHandler(this, new PebbleKit.PebbleDataReceiver(Constants.WATCHAPP_UUID) {
-            @Override
-            public void receiveData(final Context context, final int transactionId, final PebbleDictionary data) {
-                Log.d("SmartDAYS", "Received value=" + data.getInteger(Constants.START_STOP_KEY));
-                PebbleKit.sendAckToPebble(getApplicationContext(), transactionId);
-
-                if (data.getInteger(Constants.START_STOP_KEY) == Constants.STOP_MESSAGE) {
-                    if (LoggingService.isRunning()) {
-                        stopSelf();
-                    }
-                }
-            }
-        });*/
         running = false;
     }
 
@@ -91,6 +80,9 @@ public class LoggingService extends Service {
         Log.i("LocalService", "Received start id " + startId + ": " + intent);
 
         if (!running) {
+            dataloggingReceiver = new SmartDaysPebbleDataLogReceiver(Constants.WATCHAPP_UUID, bufferOutPebble, bufferOutPhone, phoneDataBuffer);
+            phoneSensorEventListener = new PhoneSensorEventListener(phoneDataBuffer);
+
             startLoggingPebble();
             startLoggingPhone();
             running = true;
@@ -187,4 +179,7 @@ public class LoggingService extends Service {
         sensorManager.registerListener(phoneSensorEventListener, accelerometer, SensorManager.SENSOR_DELAY_FASTEST);
     }
 
+    public void setOffset(long o) {
+        dataloggingReceiver.setOffset(o);
+    }
 }

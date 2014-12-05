@@ -3,11 +3,7 @@ package smartdays.smartdays;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
-import android.util.Log;
 
-import java.io.BufferedOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
 
 /**
  * Created by hector on 02/12/14.

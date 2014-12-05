@@ -31,6 +31,11 @@ public class SmartDaysPebbleDataLogReceiver extends PebbleKit.PebbleDataLogRecei
         bufferOutPebble = bope;
         bufferOutPhone = boph;
         phoneDataBuffer = pdf;
+        Log.d("SmartDAYS", "Offset: " + String.valueOf(offsetFromUTC));
+    }
+
+    public void setOffset(long o) {
+        offsetFromUTC = o;
     }
 
     @Override
