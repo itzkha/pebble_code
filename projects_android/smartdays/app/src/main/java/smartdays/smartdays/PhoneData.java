@@ -9,7 +9,7 @@ public class PhoneData {
     private short[] xyz;
 
     public PhoneData() {
-        timestamp = 0;
+        timestamp = System.currentTimeMillis();
         xyz = new short[3];
         for (int i = 0; i < 3; i++) {
             xyz[i] = 0;
@@ -17,7 +17,7 @@ public class PhoneData {
     }
 
     public PhoneData(long t, float[] values) {
-        timestamp = t / 1000000;
+        timestamp = t;
         xyz = new short[3];
         for (int i = 0; i < 3; i++) {
             xyz[i] = (short) (100 * values[i]);

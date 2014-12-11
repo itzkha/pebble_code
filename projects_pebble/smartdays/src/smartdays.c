@@ -131,6 +131,16 @@ static void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResul
   }
 }
 
+void delayed_logging(void *data) {
+  // Start logging
+  s_log_ref = data_logging_create(DATA_LOG_TAG_ACCELEROMETER, DATA_LOGGING_BYTE_ARRAY, BUFFER_SIZE_BYTES, true);
+  // Subscribe to the accelerometer data service
+  accel_raw_data_service_subscribe(BUFFER_SIZE, data_handler);
+  // Choose update rate
+  accel_service_set_sampling_rate(ACCEL_SAMPLING_25HZ);
+  text_layer_set_text(s_output_layer, "Logging..." );
+}
+
 static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Outbox send success!");
   
@@ -139,15 +149,9 @@ static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
       // Send pebble timestamp
       send_command(TIMESTAMP_COMMAND);
       sync_counter = 0;
-      
       text_layer_set_text(s_output_layer, "Phone is OK" );
-      // Start logging if application sends ACK
-      s_log_ref = data_logging_create(DATA_LOG_TAG_ACCELEROMETER, DATA_LOGGING_BYTE_ARRAY, BUFFER_SIZE_BYTES, true);
-      // Subscribe to the accelerometer data service
-      accel_raw_data_service_subscribe(BUFFER_SIZE, data_handler);
-      // Choose update rate
-      accel_service_set_sampling_rate(ACCEL_SAMPLING_25HZ);
-      text_layer_set_text(s_output_layer, "Logging..." );
+      // start logging after 1 second
+      app_timer_register(1000, delayed_logging, NULL);
       break;
     case STOP_COMMAND:
       text_layer_set_text(s_output_layer, "I'll be back...");

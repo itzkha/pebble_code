@@ -1,6 +1,8 @@
 package smartdays.smartdays;
 
 
+import android.util.Log;
+
 import java.nio.ByteBuffer;
 
 /**
@@ -30,32 +32,60 @@ public class PhoneDataBuffer {
         }
     }
 
+    public int getIndexAt(int pos) {
+        int newPos = position + pos;
+        if (newPos < 0) {
+            newPos = size - (-newPos % size);
+        }
+        else {
+            newPos = newPos % size;
+        }
+        return newPos;
+    }
+
     public byte[] getMatchingData(long t) {
-        int newPos;
-        int matchingPosition = 0;
-        long matchingDifference = Long.MAX_VALUE;
+        int matchingPosition;
+        int i;
+        //int steps = 0;
+        long temp;
+        long minDifference;
         long tempDifference;
 
-        for (int i = 1; i <= size; i++) {
-            newPos = position - i;
-            if (newPos < 0) {
-                newPos += size;
+        tempDifference = t - buffer[getIndexAt(-1)].getTimeStamp();                                 // compute the difference between required t and current time (-1)
+        i = (int) (tempDifference / Constants.MAX_MATCHING_DIFFERENCE);                             // compute the approximated index in the buffer
+
+        minDifference = Math.abs(t - buffer[getIndexAt(i)].getTimeStamp());                         // compute the difference at the approximated starting point
+        tempDifference = Math.abs(t - buffer[getIndexAt(--i)].getTimeStamp());                      // compute the difference one position backwards
+        //steps++;
+
+        if (tempDifference < minDifference) {                                                       // search backwards
+            while (tempDifference < minDifference) {
+                minDifference = tempDifference;
+                tempDifference = Math.abs(t - buffer[getIndexAt(--i)].getTimeStamp());
+                //steps++;
             }
-            tempDifference = Math.abs(buffer[newPos].getTimeStamp() - t);
-            if (tempDifference < matchingDifference) {
-                matchingPosition = newPos;
-                matchingDifference = tempDifference;
-                if (matchingDifference < Constants.MAX_MATCHING_DIFFERENCE) {
-                    break;
-                }
-            }
+            matchingPosition = getIndexAt(++i);
         }
-        //Log.d("SmartDAYS", "TimeStamp phone: " + String.valueOf(buffer[matchingPosition].getTimeStamp()) + " - Diff: " + String.valueOf(matchingDifference));
+        else {                                                                                      // search forward
+            i++;
+            temp = minDifference;
+            minDifference = tempDifference;
+            tempDifference = temp;
+            while (tempDifference < minDifference) {
+                minDifference = tempDifference;
+                tempDifference = Math.abs(t - buffer[getIndexAt(++i)].getTimeStamp());
+                //steps++;
+            }
+            matchingPosition = getIndexAt(--i);
+        }
+
+        //Log.d("SmartDAYS", "required: " + String.valueOf(t) + " found: " + String.valueOf(buffer[matchingPosition].getTimeStamp()) + " diff:" + String.valueOf(minDifference) + " relPos:" + i + " steps:" + String.valueOf(steps));
+
 
         ByteBuffer byteBuffer = ByteBuffer.allocate(Constants.PACKET_SIZE);
         byteBuffer.putLong(buffer[matchingPosition].getTimeStamp());
         short[] tempValues = buffer[matchingPosition].getXYZ();
-        for (int i = 0; i < 3; i++) {
+        for (i = 0; i < 3; i++) {
             byteBuffer.putShort(tempValues[i]);
         }
         return byteBuffer.array();

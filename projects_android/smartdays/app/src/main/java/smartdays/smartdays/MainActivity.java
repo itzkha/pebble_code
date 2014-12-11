@@ -17,7 +17,6 @@ import com.getpebble.android.kit.util.PebbleDictionary;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Date;
 import java.util.TimeZone;
 
 
@@ -25,6 +24,7 @@ public class MainActivity extends Activity {
 
     private TextView textView;
     private Intent intent;
+    private PebbleKit.PebbleDataReceiver pebbleReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,11 +57,12 @@ public class MainActivity extends Activity {
             }
         });
 
-        PebbleKit.registerReceivedDataHandler(this, new PebbleKit.PebbleDataReceiver(Constants.WATCHAPP_UUID) {
+
+        pebbleReceiver = new PebbleKit.PebbleDataReceiver(Constants.WATCHAPP_UUID) {
             private long ackTime = 0;
             private long deltaCom = 0;
             TimeZone tz = TimeZone.getDefault();
-            long offsetFromUTC = tz.getOffset(new Date().getTime());
+            long offsetFromUTC = tz.getOffset(System.currentTimeMillis());
 
             @Override
             public void receiveData(final Context context, final int transactionId, final PebbleDictionary data) {
@@ -71,7 +72,7 @@ public class MainActivity extends Activity {
                         if (!LoggingService.isRunning()) {
                             startService(intent);
                             textView.setText("Service started...");
-                            ackTime = new Date().getTime();
+                            ackTime = System.currentTimeMillis();
                         }
                         break;
                     case Constants.STOP_COMMAND:
@@ -81,8 +82,8 @@ public class MainActivity extends Activity {
                         }
                         break;
                     case Constants.TIMESTAMP_COMMAND:
-                        deltaCom = (new Date().getTime() - ackTime) / 2;
-                        ackTime = new Date().getTime();
+                        deltaCom = (System.currentTimeMillis() - ackTime) / 2;
+                        ackTime = System.currentTimeMillis();
 
                         offsetFromUTC = ( offsetFromUTC + ((ByteBuffer.wrap(data.getBytes(Constants.TIMESTAMP_KEY)).order(ByteOrder.LITTLE_ENDIAN).getLong() + deltaCom) - ackTime) ) / 2;
                         Log.d("SmartDAYS", "deltaCom=" + String.valueOf(deltaCom) + " new offset=" + String.valueOf(offsetFromUTC));
@@ -92,8 +93,15 @@ public class MainActivity extends Activity {
                 }
                 PebbleKit.sendAckToPebble(getApplicationContext(), transactionId);
             }
-        });
+        };
+        PebbleKit.registerReceivedDataHandler(this, pebbleReceiver);
 
     }
-
+/*
+    @Override
+    public void onStop() {
+        unregisterReceiver(pebbleReceiver);
+        super.onStop();
+    }
+*/
 }

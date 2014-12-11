@@ -1,4 +1,4 @@
-setwd("/home/hector/Desktop/work/SmartDays/pebble_code/R")
+setwd("/home/hector/Desktop/work/SmartDays/pebble_code/R/test_matched_0")
 filePebble <- file("testPebbleAccel", "rb")
 timestamp_l <- list()
 xyz_l <- list()
@@ -25,21 +25,12 @@ timestamp.order <- order(timestamp)
 timestamp.ordered <- timestamp[timestamp.order]
 xyz <- do.call(rbind, xyz_l[timestamp.order])
 
-
-#plot(timestamp.ordered)
-#plot(timestamp.ordered[-1] - timestamp.ordered[-length(timestamp.ordered)])
-#boxplot(timestamp.ordered[-1] - timestamp.ordered[-length(timestamp.ordered)])
-
-plot(xyz[,1], type="l", col="red", ylim=c(-4000, 4000))
-lines(xyz[,2], col="green")
-lines(xyz[,3], col="blue")
-
 pebble <- list()
 pebble[["timestamp"]] <- timestamp.ordered
 pebble[["xyz"]] <- xyz
 
 #--------------------------------------------------------------------------------------------------
-setwd("/home/hector/Desktop/work/SmartDays/pebble_code/R")
+setwd("/home/hector/Desktop/work/SmartDays/pebble_code/R/test_matched_0")
 filePhone <- file("testPhoneAccel", "rb")
 timestamp_l <- list()
 xyz_l <- list()
@@ -63,15 +54,7 @@ timestamp <- do.call(c, timestamp_l)
 
 timestamp.order <- order(timestamp)
 timestamp.ordered <- timestamp[timestamp.order]
-
 xyz <- do.call(rbind, xyz_l[timestamp.order])
-#plot(timestamp.ordered)
-#plot(timestamp.ordered[-1] - timestamp.ordered[-length(timestamp.ordered)])
-#boxplot(timestamp.ordered[-1] - timestamp.ordered[-length(timestamp.ordered)])
-
-plot(xyz[,1], type="l", col="red", ylim=c(-4000, 4000))
-lines(xyz[,2], col="green")
-lines(xyz[,3], col="blue")
 
 phone <- list()
 phone[["timestamp"]] <- timestamp.ordered
@@ -81,31 +64,22 @@ phone[["xyz"]] <- -xyz
 
 par(oma=c(0,0,0,0), mar=c(3,2,1,1), mfrow=c(2,2))
 timestamp.pebble <- as.numeric(sapply(pebble$timestamp, function(x){seq(x, by=40, length.out=25)})) - pebble$timestamp[1]
-plot(timestamp.pebble, pebble$xyz[,1], type="l", col="red", ylim=c(-4000, 4000))#, xlim=c(20000, 25000))
+plot(timestamp.pebble, pebble$xyz[,1], type="l", col="red", ylim=c(-4000, 4000))
 lines(timestamp.pebble, pebble$xyz[,2], col="green")
 lines(timestamp.pebble, pebble$xyz[,3], col="blue")
-abline(v=9100, xpd=NA)
-plot(timestamp.pebble, pebble$xyz[,1], type="l", col="red", ylim=c(-4000, 4000))#, xlim=c(950000, 1000000))
+plot(timestamp.pebble, pebble$xyz[,1], type="l", col="red", ylim=c(-4000, 4000), xlim=c(1000000, 1050000))
 lines(timestamp.pebble, pebble$xyz[,2], col="green")
 lines(timestamp.pebble, pebble$xyz[,3], col="blue")
-abline(v=3921000, xpd=NA)
+abline(v=1040000, xpd=NA)
 
 timestamp.phone <- phone$timestamp - phone$timestamp[1]
-plot(timestamp.phone, phone$xyz[,1], type="l", col="red", ylim=c(-4000, 4000))#, xlim=c(20000, 25000))
+plot(timestamp.phone, phone$xyz[,1], type="l", col="red", ylim=c(-4000, 4000))
 lines(timestamp.phone, phone$xyz[,2], col="green")
 lines(timestamp.phone, phone$xyz[,3], col="blue")
-plot(timestamp.phone, phone$xyz[,1], type="l", col="red", ylim=c(-4000, 4000))#, xlim=c(950000, 1000000))
+plot(timestamp.phone, phone$xyz[,1], type="l", col="red", ylim=c(-4000, 4000), xlim=c(1000000, 1050000))
 lines(timestamp.phone, phone$xyz[,2], col="green")
 lines(timestamp.phone, phone$xyz[,3], col="blue")
 
-
-
-
-
-
-
-plot(phone$timestamp, col="red", ylim=c(min(min(pebble$timestamp), min(phone$timestamp)), max(max(phone$timestamp), max(pebble$timestamp))))
-points(pebble$timestamp, col="blue")
 
 
 boxplot(list(pebble=(pebble$timestamp[-1] - pebble$timestamp[-length(pebble$timestamp)])/buffer.size, phone=(phone$timestamp[-1] - phone$timestamp[-length(phone$timestamp)])), ylab="Time [ms]", main="Sampling period")
@@ -119,6 +93,4 @@ hist((phone$timestamp[-1] - phone$timestamp[-length(phone$timestamp)]), main="Ph
 par(oma=c(0,0,0,0), mar=c(3,3,1,1), mfrow=c(2,1))
 plot((pebble$timestamp[-1] - pebble$timestamp[-length(pebble$timestamp)])/25, type="l")
 plot(phone$timestamp[-1] - phone$timestamp[-length(phone$timestamp)], type="l")
-
-
 

@@ -10,6 +10,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorManager;
 import android.os.Environment;
 import android.os.IBinder;
+import android.os.PowerManager;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -32,10 +33,13 @@ public class LoggingService extends Service {
     PhoneSensorEventListener phoneSensorEventListener;
 
     private BufferedOutputStream bufferOutPebble = null;
+    private BufferedOutputStream bufferOutPhoneSynced = null;
     private BufferedOutputStream bufferOutPhone = null;
     private PhoneDataBuffer phoneDataBuffer;
 
     private SmartDaysPebbleDataLogReceiver dataloggingReceiver;
+
+    private PowerManager.WakeLock wakeLock;
 
     private static boolean running = false;
     private static LoggingService instance;
@@ -57,6 +61,9 @@ public class LoggingService extends Service {
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
+        PowerManager pm = (PowerManager)this.getSystemService(Context.POWER_SERVICE);
+        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "SmartDAYS");
+
         // Display a notification about us starting.  We put an icon in the status bar.
         showNotification();
 
@@ -65,8 +72,9 @@ public class LoggingService extends Service {
 
             // Create the file
             bufferOutPebble = new BufferedOutputStream(new FileOutputStream(new File(root, "testPebbleAccel")));
+            bufferOutPhoneSynced = new BufferedOutputStream(new FileOutputStream(new File(root, "testPhoneSyncedAccel")));
             bufferOutPhone = new BufferedOutputStream(new FileOutputStream(new File(root, "testPhoneAccel")));
-            phoneDataBuffer = new PhoneDataBuffer(1000);
+            phoneDataBuffer = new PhoneDataBuffer(10000);
             Log.d("SmartDAYS", "Files created...");
 
         } catch (IOException ioe) {
@@ -80,8 +88,8 @@ public class LoggingService extends Service {
         Log.i("LocalService", "Received start id " + startId + ": " + intent);
 
         if (!running) {
-            dataloggingReceiver = new SmartDaysPebbleDataLogReceiver(Constants.WATCHAPP_UUID, bufferOutPebble, bufferOutPhone, phoneDataBuffer);
-            phoneSensorEventListener = new PhoneSensorEventListener(phoneDataBuffer);
+            dataloggingReceiver = new SmartDaysPebbleDataLogReceiver(Constants.WATCHAPP_UUID, bufferOutPebble, bufferOutPhoneSynced, phoneDataBuffer);
+            phoneSensorEventListener = new PhoneSensorEventListener(phoneDataBuffer, bufferOutPhone);
 
             startLoggingPebble();
             startLoggingPhone();
@@ -112,6 +120,7 @@ public class LoggingService extends Service {
         }
 
         sensorManager.unregisterListener(phoneSensorEventListener);
+        wakeLock.release();
 
         try {
             bufferOutPebble.close();
@@ -177,6 +186,7 @@ public class LoggingService extends Service {
 
     private void startLoggingPhone() {
         sensorManager.registerListener(phoneSensorEventListener, accelerometer, SensorManager.SENSOR_DELAY_FASTEST);
+        wakeLock.acquire();
     }
 
     public void setOffset(long o) {
