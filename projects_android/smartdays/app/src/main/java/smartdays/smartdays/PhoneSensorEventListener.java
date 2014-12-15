@@ -34,7 +34,7 @@ public class PhoneSensorEventListener implements SensorEventListener {
         long systemTimeStamp = System.currentTimeMillis();                                          // getting system time here because sensorEvent.timestamp (depending on hardware)
                                                                                                     // does not yield system time but elapsed time since boot
 
-        if ((systemTimeStamp - previousTimeStamp) >= Constants.TOO_FREQUENT_MEASURES) {             // discards too frequent measures (< 16 mS)
+        if ((systemTimeStamp - previousTimeStamp) >= Constants.PHONE_SAMPLING_FREQUENCY) {             // discards too frequent measures (< 20 mS)
             previousTimeStamp = systemTimeStamp;
 
             PhoneData temp = new PhoneData(systemTimeStamp, sensorEvent.values);

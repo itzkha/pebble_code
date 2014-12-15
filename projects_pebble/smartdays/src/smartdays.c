@@ -7,7 +7,8 @@
 #include <pebble.h>
 #define DATA_LOG_TAG_ACCELEROMETER 51
 #define BUFFER_SIZE 25
-#define BUFFER_SIZE_BYTES sizeof(uint64_t)+(3*BUFFER_SIZE*sizeof(int16_t))
+//#define BUFFER_SIZE_BYTES sizeof(uint64_t)+(3*BUFFER_SIZE*sizeof(int16_t))
+#define BUFFER_SIZE_BYTES (2*sizeof(uint64_t))+(3*BUFFER_SIZE*sizeof(int16_t))
 #define PACKETS_PER_SESSION 10
 
 #define COMMAND_KEY 0xcafebabe
@@ -32,6 +33,7 @@ static int packets_sent = 0;
 
 typedef struct packet {
   uint64_t timestamp;
+  uint64_t timestamp_system;
   int16_t xyz[BUFFER_SIZE][3];
 } accel_packet;                 //if BUFFER_SIZE_BYTES is not a multiple of 8, C appends some bytes to perform memory packing (8 bytes)
 
@@ -59,6 +61,11 @@ static void wait(int t) {
 static void data_handler(AccelRawData *data, uint32_t num_samples, uint64_t timestamp) {
   uint16_t i;
 
+  time_t seconds;
+  uint16_t miliseconds;
+  time_ms(&seconds, &miliseconds);
+  to_send.timestamp_system = (1000 * (uint64_t)seconds) + miliseconds;
+  
   to_send.timestamp = timestamp;
   for (i = 0; i < num_samples; i++) {
     to_send.xyz[i][0] = (int16_t)data[i].x;                                                                         //save the measures
