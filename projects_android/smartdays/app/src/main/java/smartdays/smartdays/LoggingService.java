@@ -10,7 +10,9 @@ import android.hardware.Sensor;
 import android.hardware.SensorManager;
 import android.os.Environment;
 import android.os.IBinder;
+import android.os.Message;
 import android.os.PowerManager;
+import android.os.SystemClock;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -30,6 +32,8 @@ import java.util.TimeZone;
  */
 public class LoggingService extends Service {
 
+    private static LoggingService instance = null;
+
     private NotificationManager notificationManager;
     private int NOTIFICATION = R.string.local_service_started;
     private SensorManager sensorManager;
@@ -42,17 +46,19 @@ public class LoggingService extends Service {
     private PhoneDataBuffer phoneDataBuffer;
 
     private SmartDaysPebbleDataLogReceiver dataloggingReceiver;
-    private PebbleKit.PebbleDataReceiver pebbleAppMessageReceiver;
+    private PebbleKit.PebbleDataReceiver pebbleAppMessageDataReceiver;
+    private PebbleKit.PebbleAckReceiver pebbleAppMessageAckReceiver;
+    private PebbleKit.PebbleNackReceiver pebbleAppMessageNackReceiver;
     private PowerManager.WakeLock wakeLock;
 
     private static boolean running = false;
-    private static LoggingService instance;
+    private int startCounter = 0;
+    private int stopCounter = 0;
 
 
     public static boolean isRunning() {
         return running;
     }
-
     public static LoggingService getInstance() {
         return instance;
     }
@@ -60,7 +66,9 @@ public class LoggingService extends Service {
     @Override
     public void onCreate() {
         Log.d("SmartDAYS", "Creating...");
-        instance = this;
+        if (instance == null) {
+            instance = this;
+        }
         notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
@@ -71,7 +79,7 @@ public class LoggingService extends Service {
         // Display a notification about us starting.  We put an icon in the status bar.
         showNotification();
 
-        pebbleAppMessageReceiver = new PebbleKit.PebbleDataReceiver(Constants.WATCHAPP_UUID) {
+        pebbleAppMessageDataReceiver = new PebbleKit.PebbleDataReceiver(Constants.WATCHAPP_UUID) {
             private long ackTime = 0;
             private long deltaCom = 0;
             TimeZone tz = TimeZone.getDefault();
@@ -83,31 +91,79 @@ public class LoggingService extends Service {
                 switch (data.getInteger(Constants.COMMAND_KEY).intValue()) {
                     case Constants.START_COMMAND:
                         Log.d("SmartDAYS", "START received");
-                        if (!LoggingService.isRunning()) {
+                        /*if (!LoggingService.isRunning()) {
                             ackTime = System.currentTimeMillis();
-                        }
+                        }*/
                         break;
                     case Constants.STOP_COMMAND:
                         Log.d("SmartDAYS", "STOP received");
-                        if (LoggingService.isRunning()) {
+                        /*if (LoggingService.isRunning()) {
                             stopSelf();
-                        }
+                        }*/
                         break;
                     case Constants.TIMESTAMP_COMMAND:
                         Log.d("SmartDAYS", "TIMESTAMP received");
-                        deltaCom = (System.currentTimeMillis() - ackTime) / 2;
+                        /*deltaCom = (System.currentTimeMillis() - ackTime) / 2;
                         ackTime = System.currentTimeMillis();
 
                         offsetFromUTC = (offsetFromUTC + ((ByteBuffer.wrap(data.getBytes(Constants.TIMESTAMP_KEY)).order(ByteOrder.LITTLE_ENDIAN).getLong() + deltaCom) - ackTime)) / 2;
                         Log.d("SmartDAYS", "deltaCom=" + String.valueOf(deltaCom) + " new offset=" + String.valueOf(offsetFromUTC));
                         dataloggingReceiver.setOffset(offsetFromUTC);
-
+                        */
                         break;
                 }
                 PebbleKit.sendAckToPebble(getApplicationContext(), transactionId);
             }
         };
-        PebbleKit.registerReceivedDataHandler(this, pebbleAppMessageReceiver);
+        PebbleKit.registerReceivedDataHandler(this, pebbleAppMessageDataReceiver);
+
+        pebbleAppMessageAckReceiver = new PebbleKit.PebbleAckReceiver(Constants.WATCHAPP_UUID) {
+            @Override
+            public void receiveAck(Context context, int transactionId) {
+                Log.i("SmartDAYS", "Received ack for transaction " + transactionId);
+
+                switch (transactionId) {
+                    case Constants.START_COMMAND:
+                        startCounter = 0;
+                        break;
+                    case Constants.STOP_COMMAND:
+                        stopCounter = 0;
+                        stop();
+                        break;
+                }
+            }
+        };
+        PebbleKit.registerReceivedAckHandler(this, pebbleAppMessageAckReceiver);
+
+        pebbleAppMessageNackReceiver = new PebbleKit.PebbleNackReceiver(Constants.WATCHAPP_UUID) {
+            @Override
+            public void receiveNack(Context context, int transactionId) {
+                Log.i("SmartDAYS", "Received nack for transaction " + transactionId);
+
+                switch (transactionId) {
+                    case Constants.START_COMMAND:
+                        startCounter++;
+                        if (startCounter < 5) {
+                            sendCommand(Constants.START_COMMAND);
+                        } else {
+                            Toast.makeText(instance, R.string.pebble_not_responding, Toast.LENGTH_SHORT).show();
+                            stop();
+                        }
+                        break;
+                    case Constants.STOP_COMMAND:
+                        stopCounter++;
+                        if (stopCounter < 5) {
+                            sendCommand(Constants.STOP_COMMAND);
+                        } else {
+                            // Tell the user we stopped
+                            Toast.makeText(instance, R.string.pebble_not_responding, Toast.LENGTH_SHORT).show();
+                            stop();
+                        }
+                        break;
+                }
+            }
+        };
+        PebbleKit.registerReceivedNackHandler(this, pebbleAppMessageNackReceiver);
 
         try {
             File root = Environment.getExternalStorageDirectory();
@@ -117,6 +173,7 @@ public class LoggingService extends Service {
             bufferOutPhoneSynced = new BufferedOutputStream(new FileOutputStream(new File(root, "testPhoneSyncedAccel")));
             //bufferOutPhone = new BufferedOutputStream(new FileOutputStream(new File(root, "testPhoneAccel")));
             phoneDataBuffer = new PhoneDataBuffer(15000);       //5 minutes
+
             Log.d("SmartDAYS", "Files created...");
 
         } catch (IOException ioe) {
@@ -138,7 +195,6 @@ public class LoggingService extends Service {
             startLoggingPhone();
             running = true;
 
-            PebbleKit.startAppOnPebble(getApplicationContext(), Constants.WATCHAPP_UUID);           // start Pebble application
         }
 
         return Service.START_STICKY;
@@ -146,15 +202,13 @@ public class LoggingService extends Service {
 
     @Override
     public void onDestroy() {
-
-        PebbleKit.closeAppOnPebble(getApplicationContext(), Constants.WATCHAPP_UUID);               // stop the Pebble application
-
         // Cancel the persistent notification.
         notificationManager.cancel(NOTIFICATION);
 
         // Tell the user we stopped.
         Toast.makeText(this, R.string.local_service_stopped, Toast.LENGTH_SHORT).show();
 
+        //------------------------------------------------------------------------------------------ Stop acquisition receivers
         try {
             unregisterReceiver(dataloggingReceiver);
             Log.d("SmartDAYS", "Unregistering receiver...");
@@ -165,9 +219,9 @@ public class LoggingService extends Service {
         }
 
         sensorManager.unregisterListener(phoneSensorEventListener);
-        unregisterReceiver(pebbleAppMessageReceiver);
         wakeLock.release();
 
+        //------------------------------------------------------------------------------------------ Close files
         try {
             bufferOutPebble.close();
             Log.d("SmartDAYS", "File testCapture closed...");
@@ -195,6 +249,12 @@ public class LoggingService extends Service {
             Log.d("SmartDAYS", "Closing file Phone... null pointer");
         }
 
+        //------------------------------------------------------------------------------------------ Stop communication with the Pebble
+        unregisterReceiver(pebbleAppMessageDataReceiver);
+        unregisterReceiver(pebbleAppMessageAckReceiver);
+        unregisterReceiver(pebbleAppMessageNackReceiver);
+
+        PebbleKit.closeAppOnPebble(getApplicationContext(), Constants.WATCHAPP_UUID);               // stop the Pebble application
         running = false;
     }
 
@@ -233,6 +293,10 @@ public class LoggingService extends Service {
     private void startLoggingPebble() {
         // Register DataLogging Receiver
         PebbleKit.registerDataLogReceiver(this, dataloggingReceiver);
+
+        PebbleDictionary data = new PebbleDictionary();
+        data.addUint8(Constants.COMMAND_KEY, (byte) Constants.START_COMMAND);
+        PebbleKit.sendDataToPebbleWithTransactionId(getApplicationContext(), Constants.WATCHAPP_UUID, data, Constants.START_COMMAND);
     }
 
     private void startLoggingPhone() {
@@ -240,5 +304,21 @@ public class LoggingService extends Service {
         wakeLock.acquire();
     }
 
+    private void sendCommand(int command) {
+        PebbleDictionary data = new PebbleDictionary();
+        data.addUint8(Constants.COMMAND_KEY, (byte) command);
+        PebbleKit.sendDataToPebbleWithTransactionId(getApplicationContext(), Constants.WATCHAPP_UUID, data, command);
+    }
+
+    private void stop() {
+        if (MainActivity.serviceMessagesHandler != null) {
+            // Tell the user we stopped
+            Message msg = Message.obtain();
+            msg.what = Constants.SERVICE_STOPPED;
+            MainActivity.serviceMessagesHandler.sendMessage(msg);
+        }
+        // Then stop
+        stopSelf();
+    }
 }
 

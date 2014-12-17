@@ -3,15 +3,17 @@
 #define DATA_LOG_TAG_ACCELEROMETER 51
 #define BUFFER_SIZE 25
 #define BUFFER_SIZE_BYTES sizeof(uint64_t)+(3*BUFFER_SIZE*sizeof(int16_t))
-
 #define WORKER_DOTS 10
+#define FROM_WATCH_APP_KEY 98
+
 static DataLoggingSessionRef s_log_ref;
 static int packets_sent = 0;
+static bool from_watch_app = false;
 
 typedef struct packet {
   uint64_t timestamp;
   int16_t xyz[BUFFER_SIZE][3];
-} accel_packet;                 //if BUFFER_SIZE_BYTES is not a multiple of 8, C appends some bytes to perform memory packing (8 bytes)
+} accel_packet;                                             //if BUFFER_SIZE_BYTES is not a multiple of 8, C appends some bytes to perform memory packing (8 bytes)
 
 static accel_packet to_send;
 
@@ -55,11 +57,16 @@ static void worker_deinit() {
   // Finish logging session
   accel_data_service_unsubscribe();
   data_logging_finish(s_log_ref);
+  
+  persist_write_bool(FROM_WATCH_APP_KEY, false);
 }
 
 int main(void) {
-  worker_init();
-  worker_event_loop();
-  worker_deinit();
+  from_watch_app = persist_exists(FROM_WATCH_APP_KEY) ? persist_read_int(FROM_WATCH_APP_KEY) : false;
+  if (from_watch_app) {                                                                            // check whether the worker was launched from the watch app
+    worker_init();
+    worker_event_loop();
+    worker_deinit();
+  }
 }
 

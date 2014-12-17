@@ -20,4 +20,5 @@ public class Constants {
 
     public static final int TIMESTAMP_KEY = 0xdeadbeef;
 
+    public static final int SERVICE_STOPPED = 43;
 }
