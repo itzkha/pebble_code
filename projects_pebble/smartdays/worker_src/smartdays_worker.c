@@ -68,5 +68,8 @@ int main(void) {
     worker_event_loop();
     worker_deinit();
   }
+  else {
+    worker_launch_app();
+  }
 }
 
