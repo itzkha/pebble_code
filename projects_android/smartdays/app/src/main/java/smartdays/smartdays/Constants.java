@@ -8,10 +8,11 @@ import java.util.UUID;
 public class Constants {
     public static final UUID WATCHAPP_UUID = UUID.fromString("f3cdf03e-a639-4196-88a0-51fe502ab3d4");
     public static final int DATA_LOG_TAG_ACCEL = 51;
-    public static final int PEBBLE_BUFFER_SIZE = 25;                                    // 1 second
-    public static final int PEBBLE_SAMPLING_PERIOD = 40;                                // mS
-    public static final int PACKET_SIZE = 14;                                           // long + short + short + short
-    public static final int PHONE_SAMPLING_PERIOD = PEBBLE_SAMPLING_PERIOD / 2;         // 20 mS
+    public static final int PEBBLE_BUFFER_SIZE = 25;                                                // 1 second
+    public static final int PEBBLE_SAMPLING_PERIOD = 40;                                            // 40 mS
+    public static final int PACKET_SIZE = 14;                                                       // long + short + short + short
+    public static final int PHONE_SAMPLING_PERIOD_MS = (PEBBLE_SAMPLING_PERIOD / 2);                // 20 mS
+    public static final int PHONE_SAMPLING_PERIOD_NS = (PEBBLE_SAMPLING_PERIOD / 2) * 1000000;      // 20 mS
 
     public static final int COMMAND_KEY = 0xcafebabe;
     public static final int START_COMMAND = 5;

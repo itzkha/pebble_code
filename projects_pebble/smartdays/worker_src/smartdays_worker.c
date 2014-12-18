@@ -12,22 +12,25 @@ static bool from_watch_app = false;
 
 typedef struct packet {
   uint64_t timestamp;
-  int16_t xyz[BUFFER_SIZE][3];
+  AccelRawData xyz[BUFFER_SIZE];
+//  int16_t xyz[BUFFER_SIZE][3];
 } accel_packet;                                             //if BUFFER_SIZE_BYTES is not a multiple of 8, C appends some bytes to perform memory packing (8 bytes)
 
 static accel_packet to_send;
+static const size_t accel_data_size_bytes = 3*BUFFER_SIZE*sizeof(int16_t);
 
 
 static void data_handler(AccelRawData *data, uint32_t num_samples, uint64_t timestamp) {
-  uint16_t i;
-  static DataLoggingResult result = DATA_LOGGING_SUCCESS;
+//  uint16_t i;
+  static DataLoggingResult result;
   
   to_send.timestamp = timestamp;
-  for (i = 0; i < num_samples; i++) {
+/*  for (i = 0; i < num_samples; i++) {
     to_send.xyz[i][0] = (int16_t)data[i].x;                 //save the measures
     to_send.xyz[i][1] = (int16_t)data[i].y;
     to_send.xyz[i][2] = (int16_t)data[i].z;
-  }
+  }*/
+  memcpy(to_send.xyz, data, accel_data_size_bytes);
   result = data_logging_log(s_log_ref, &to_send, 1);        //push the data
                                                             //data are sent to the phone (if available) ~every minute (I don't know how to change that)
   if (result == DATA_LOGGING_SUCCESS) {

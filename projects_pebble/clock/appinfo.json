@@ -1,0 +1,17 @@
+{
+  "uuid": "c49db43a-5003-4bf8-a056-601284a52823",
+  "shortName": "clock",
+  "longName": "clock",
+  "companyName": "MakeAwesomeHappen",
+  "versionCode": 1,
+  "versionLabel": "1.0",
+  "watchapp": {
+    "watchface": false
+  },
+  "appKeys": {
+    "dummy": 0
+  },
+  "resources": {
+    "media": []
+  }
+}

@@ -16,34 +16,40 @@ public class PhoneSensorEventListener implements SensorEventListener {
 
     private PhoneDataBuffer dataBuffer;
     private long previousTimeStamp;
+    private long firstTimeStampElapsed;
+    private long firstTimeStampReal;
     private BufferedOutputStream bufferOutPhone;
 
     public PhoneSensorEventListener(PhoneDataBuffer b) {
         dataBuffer = b;
         previousTimeStamp = 0;
         bufferOutPhone = null;
+        firstTimeStampElapsed = System.nanoTime();
+        firstTimeStampReal = System.currentTimeMillis();
     }
 
     public PhoneSensorEventListener(PhoneDataBuffer b, BufferedOutputStream bop) {
         dataBuffer = b;
         previousTimeStamp = 0;
         bufferOutPhone = bop;
+        firstTimeStampElapsed = System.nanoTime();
+        firstTimeStampReal = System.currentTimeMillis();
     }
 
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
-        long systemTimeStamp = System.currentTimeMillis();                                          // getting system time here because sensorEvent.timestamp (depending on hardware)
+        if ((sensorEvent.timestamp - previousTimeStamp) >= Constants.PHONE_SAMPLING_PERIOD_NS) {    // discards too frequent measures (< 20 mS)
+            previousTimeStamp = sensorEvent.timestamp;
+
+            long actualTimeStamp = firstTimeStampReal + ((sensorEvent.timestamp - firstTimeStampElapsed) / 1000000);
+                                                                                                    // computing the actual timestamp -> sensorEvent.timestamp (depending on hardware)
                                                                                                     // does not yield system time but elapsed time since boot
-
-        if ((systemTimeStamp - previousTimeStamp) >= Constants.PHONE_SAMPLING_PERIOD) {             // discards too frequent measures (< 20 mS)
-            previousTimeStamp = systemTimeStamp;
-
-            PhoneData temp = new PhoneData(systemTimeStamp, sensorEvent.values);
+            PhoneData temp = new PhoneData(actualTimeStamp, sensorEvent.values);
             dataBuffer.putData(temp);
 
             if (bufferOutPhone != null) {
                 ByteBuffer byteBuffer = ByteBuffer.allocate(Constants.PACKET_SIZE);
-                byteBuffer.putLong(systemTimeStamp);
+                byteBuffer.putLong(actualTimeStamp);
                 for (int i = 0; i < 3; i++) {
                     byteBuffer.putShort((short) (100 * sensorEvent.values[i]));
                 }

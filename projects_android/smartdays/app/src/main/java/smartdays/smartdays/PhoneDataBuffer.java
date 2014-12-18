@@ -35,7 +35,7 @@ public class PhoneDataBuffer {
     public int getIndexAt(int pos) {
         int newPos = position + pos;
         if (newPos < 0) {
-            newPos = size - (-newPos % size);
+            newPos = (size - (-newPos % size)) % size;
         }
         else {
             newPos = newPos % size;
@@ -52,7 +52,7 @@ public class PhoneDataBuffer {
         long tempDifference;
 
         tempDifference = t - buffer[getIndexAt(-1)].getTimeStamp();                                 // compute the difference between required t and current time (-1)
-        i = (int) (tempDifference / Constants.PHONE_SAMPLING_PERIOD);                             // compute the approximated index in the buffer
+        i = (int) (tempDifference / Constants.PHONE_SAMPLING_PERIOD_MS);                             // compute the approximated index in the buffer
 
         minDifference = Math.abs(t - buffer[getIndexAt(i)].getTimeStamp());                         // compute the difference at the approximated starting point
         tempDifference = Math.abs(t - buffer[getIndexAt(--i)].getTimeStamp());                      // compute the difference one position backwards

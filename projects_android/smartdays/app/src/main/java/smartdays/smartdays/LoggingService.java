@@ -171,7 +171,8 @@ public class LoggingService extends Service {
             // Create the file
             bufferOutPebble = new BufferedOutputStream(new FileOutputStream(new File(root, "testPebbleAccel")));
             bufferOutPhoneSynced = new BufferedOutputStream(new FileOutputStream(new File(root, "testPhoneSyncedAccel")));
-            //bufferOutPhone = new BufferedOutputStream(new FileOutputStream(new File(root, "testPhoneAccel")));
+            bufferOutPhone = new BufferedOutputStream(new FileOutputStream(new File(root, "testPhoneAccel")));
+//            bufferOutPhone = null;
             phoneDataBuffer = new PhoneDataBuffer(15000);       //5 minutes
 
             Log.d("SmartDAYS", "Files created...");
@@ -188,8 +189,7 @@ public class LoggingService extends Service {
 
         if (!running) {
             dataloggingReceiver = new SmartDaysPebbleDataLogReceiver(Constants.WATCHAPP_UUID, bufferOutPebble, bufferOutPhoneSynced, phoneDataBuffer);
-//            phoneSensorEventListener = new PhoneSensorEventListener(phoneDataBuffer, bufferOutPhone);
-            phoneSensorEventListener = new PhoneSensorEventListener(phoneDataBuffer);
+            phoneSensorEventListener = new PhoneSensorEventListener(phoneDataBuffer, bufferOutPhone);
 
             startLoggingPebble();
             startLoggingPhone();
