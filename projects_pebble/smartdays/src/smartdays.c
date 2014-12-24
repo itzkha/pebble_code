@@ -26,11 +26,9 @@ static char s_status[50];
 
 
 
-//DictionaryIterator iter;
-//DictionaryIterator* p_iter = &iter;
-//static int current_command;
-
-//static int8_t sync_counter = 0;
+DictionaryIterator iter;
+DictionaryIterator* p_iter = &iter;
+static int current_command;
 
 
 //------------------------------------------------------------------------------------------------- Communication with the background worker
@@ -119,7 +117,7 @@ static void stop_worker() {
 
 
 //------------------------------------------------------------------------------------------------- Communication with the android application
-/*
+
 void send_command(int command) {
   time_t seconds;
   uint16_t miliseconds;
@@ -132,7 +130,7 @@ void send_command(int command) {
   dict_write_data(p_iter, TIMESTAMP_KEY, (uint8_t*)&timestamp, sizeof(timestamp));
   app_message_outbox_send();
 }
-*/
+
 
 static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   APP_LOG(APP_LOG_LEVEL_ERROR, "Message received!");
@@ -154,6 +152,10 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
           case STOP_COMMAND:
             stop_worker();
             break;
+          case TIMESTAMP_COMMAND:
+            text_layer_set_text(s_status_layer, "Synchronizing..." );
+            send_command(TIMESTAMP_COMMAND);
+            break;
         }
         break;
     }
@@ -168,45 +170,34 @@ static void inbox_dropped_callback(AppMessageResult reason, void *context) {
 
 static void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResult reason, void *context) {
   APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox send failed!");
-/*  
   switch (current_command) {
     case START_COMMAND:
+      APP_LOG(APP_LOG_LEVEL_INFO, "Phone did not reply...");
       text_layer_set_text(s_status_layer, "Phone did not reply..." );
-      app_timer_register(1000, delayed_start, NULL);
       break;
     case STOP_COMMAND:
+      APP_LOG(APP_LOG_LEVEL_INFO, "I'll be back...");
       text_layer_set_text(s_status_layer, "I'll be back...");
-      window_stack_pop(true);
       break;
     case TIMESTAMP_COMMAND:
       break;
   }
-  */
 }
 
 static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Outbox send success!");
-  /*
   switch (current_command) {
     case START_COMMAND:
-      // Send pebble timestamp
-      send_command(TIMESTAMP_COMMAND);
-      sync_counter = 0;
+      APP_LOG(APP_LOG_LEVEL_INFO, "Phone is OK");
       text_layer_set_text(s_status_layer, "Phone is OK" );
-      // start logging after 1 second
-      app_timer_register(1000, delayed_logging, NULL);
       break;
     case STOP_COMMAND:
+      APP_LOG(APP_LOG_LEVEL_INFO, "I'll be back...");
       text_layer_set_text(s_status_layer, "I'll be back...");
-      window_stack_pop(true);
       break;
     case TIMESTAMP_COMMAND:
-      if (sync_counter < N_SYNC) {
-        sync_counter++;
-        send_command(TIMESTAMP_COMMAND);
-      }
       break;
-  }*/
+  }
 }
 
 

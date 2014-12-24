@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorManager;
 import android.os.Environment;
+import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.PowerManager;
@@ -43,6 +44,7 @@ public class LoggingService extends Service {
     private BufferedOutputStream bufferOutPebble = null;
     private BufferedOutputStream bufferOutPhoneSynced = null;
     private BufferedOutputStream bufferOutPhone = null;
+    private BufferedOutputStream bufferOutSync = null;
     private PhoneDataBuffer phoneDataBuffer;
 
     private SmartDaysPebbleDataLogReceiver dataloggingReceiver;
@@ -50,10 +52,15 @@ public class LoggingService extends Service {
     private PebbleKit.PebbleAckReceiver pebbleAppMessageAckReceiver;
     private PebbleKit.PebbleNackReceiver pebbleAppMessageNackReceiver;
     private PowerManager.WakeLock wakeLock;
+    private Handler synchronizationHandler;
+    Runnable runnableSynchronization;
 
+    private long lastPhoneTimestamp = 0;
     private static boolean running = false;
-    private int startCounter = 0;
-    private int stopCounter = 0;
+    private int startFailCounter = 0;
+    private int stopFailCounter = 0;
+    private int timestampFailCounter = 0;
+    private int timestampCounter = 0;
 
 
     public static boolean isRunning() {
@@ -69,6 +76,7 @@ public class LoggingService extends Service {
         if (instance == null) {
             instance = this;
         }
+        lastPhoneTimestamp = System.currentTimeMillis();
         notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
@@ -80,8 +88,8 @@ public class LoggingService extends Service {
         showNotification();
 
         pebbleAppMessageDataReceiver = new PebbleKit.PebbleDataReceiver(Constants.WATCHAPP_UUID) {
-            private long ackTime = 0;
-            private long deltaCom = 0;
+            long currentTime;
+            long timestampPebble;
             TimeZone tz = TimeZone.getDefault();
             long offsetFromUTC = tz.getOffset(System.currentTimeMillis());
 
@@ -91,25 +99,31 @@ public class LoggingService extends Service {
                 switch (data.getInteger(Constants.COMMAND_KEY).intValue()) {
                     case Constants.START_COMMAND:
                         Log.d("SmartDAYS", "START received");
-                        /*if (!LoggingService.isRunning()) {
-                            ackTime = System.currentTimeMillis();
-                        }*/
                         break;
                     case Constants.STOP_COMMAND:
                         Log.d("SmartDAYS", "STOP received");
-                        /*if (LoggingService.isRunning()) {
-                            stopSelf();
-                        }*/
                         break;
                     case Constants.TIMESTAMP_COMMAND:
                         Log.d("SmartDAYS", "TIMESTAMP received");
-                        /*deltaCom = (System.currentTimeMillis() - ackTime) / 2;
-                        ackTime = System.currentTimeMillis();
-
-                        offsetFromUTC = (offsetFromUTC + ((ByteBuffer.wrap(data.getBytes(Constants.TIMESTAMP_KEY)).order(ByteOrder.LITTLE_ENDIAN).getLong() + deltaCom) - ackTime)) / 2;
-                        Log.d("SmartDAYS", "deltaCom=" + String.valueOf(deltaCom) + " new offset=" + String.valueOf(offsetFromUTC));
+                        //DeltaT = ((Tpe1 + Tpe2) - (Tph1 + Tph2)) / 2      We use Tpe1 = Tpe2
+                        currentTime = System.currentTimeMillis();
+                        timestampPebble = ByteBuffer.wrap(data.getBytes(Constants.TIMESTAMP_KEY)).order(ByteOrder.LITTLE_ENDIAN).getLong();
+                        offsetFromUTC = timestampPebble - ((currentTime + lastPhoneTimestamp) / 2);
+                        //Log.d("SmartDAYS", "timestampPEBBLE=" + String.valueOf(timestampPebble) + " currentTime=" + String.valueOf(currentTime) + " lastTime=" + String.valueOf(lastPhoneTimestamp) + " new offset=" + String.valueOf(offsetFromUTC));
+                        Log.d("SmartDAYS", "new offset=" + String.valueOf(offsetFromUTC));
                         dataloggingReceiver.setOffset(offsetFromUTC);
-                        */
+                        try {
+                            bufferOutSync.write(ByteBuffer.allocate(8).putLong(offsetFromUTC).array());
+                        }
+                        catch (IOException ioe) {}
+                        timestampCounter++;
+                        Log.d("SmartDAYS", "counter: " + String.valueOf(timestampCounter));
+                        if (timestampCounter < Constants.NUMBER_OF_SYNCS) {
+                            sendCommand(Constants.TIMESTAMP_COMMAND);
+                        }
+                        else {
+                            timestampCounter = 0;
+                        }
                         break;
                 }
                 PebbleKit.sendAckToPebble(getApplicationContext(), transactionId);
@@ -124,11 +138,16 @@ public class LoggingService extends Service {
 
                 switch (transactionId) {
                     case Constants.START_COMMAND:
-                        startCounter = 0;
+                        startFailCounter = 0;
+                        // ask for timestamp shift
+                        sendCommand(Constants.TIMESTAMP_COMMAND);
                         break;
                     case Constants.STOP_COMMAND:
-                        stopCounter = 0;
+                        stopFailCounter = 0;
                         stop();
+                        break;
+                    case Constants.TIMESTAMP_COMMAND:
+                        timestampFailCounter = 0;
                         break;
                 }
             }
@@ -142,8 +161,8 @@ public class LoggingService extends Service {
 
                 switch (transactionId) {
                     case Constants.START_COMMAND:
-                        startCounter++;
-                        if (startCounter < 5) {
+                        startFailCounter++;
+                        if (startFailCounter < Constants.MAX_FAILS) {
                             sendCommand(Constants.START_COMMAND);
                         } else {
                             Toast.makeText(instance, R.string.pebble_not_responding, Toast.LENGTH_SHORT).show();
@@ -151,8 +170,8 @@ public class LoggingService extends Service {
                         }
                         break;
                     case Constants.STOP_COMMAND:
-                        stopCounter++;
-                        if (stopCounter < 5) {
+                        stopFailCounter++;
+                        if (stopFailCounter < Constants.MAX_FAILS) {
                             sendCommand(Constants.STOP_COMMAND);
                         } else {
                             // Tell the user we stopped
@@ -160,10 +179,32 @@ public class LoggingService extends Service {
                             stop();
                         }
                         break;
+                    case Constants.TIMESTAMP_COMMAND:
+                        timestampFailCounter++;
+                        if (timestampFailCounter < Constants.MAX_FAILS) {
+                            sendCommand(Constants.TIMESTAMP_COMMAND);
+                        } else {
+                            // Tell the user the Pebble is not responding
+                            Toast.makeText(instance, R.string.pebble_not_responding, Toast.LENGTH_SHORT).show();
+                        }
+                        break;
                 }
             }
         };
         PebbleKit.registerReceivedNackHandler(this, pebbleAppMessageNackReceiver);
+
+        synchronizationHandler = new Handler();
+        runnableSynchronization = new Runnable() {
+            @Override
+            public void run() {
+                // ask for timestamp shift
+                PebbleKit.startAppOnPebble(getApplicationContext(), Constants.WATCHAPP_UUID);
+                sendCommand(Constants.TIMESTAMP_COMMAND);
+                synchronizationHandler.postDelayed(this, Constants.SYNCHRONIZATION_PERIOD);
+            }
+        };
+        synchronizationHandler.postDelayed(runnableSynchronization, Constants.SYNCHRONIZATION_PERIOD);
+
 
         try {
             File root = Environment.getExternalStorageDirectory();
@@ -172,8 +213,8 @@ public class LoggingService extends Service {
             bufferOutPebble = new BufferedOutputStream(new FileOutputStream(new File(root, "testPebbleAccel")));
             bufferOutPhoneSynced = new BufferedOutputStream(new FileOutputStream(new File(root, "testPhoneSyncedAccel")));
             bufferOutPhone = new BufferedOutputStream(new FileOutputStream(new File(root, "testPhoneAccel")));
-//            bufferOutPhone = null;
-            phoneDataBuffer = new PhoneDataBuffer(15000);       //5 minutes
+            bufferOutSync = new BufferedOutputStream(new FileOutputStream(new File(root, "testSync")));
+            phoneDataBuffer = new PhoneDataBuffer(Constants.BUFFER_SIZE);
 
             Log.d("SmartDAYS", "Files created...");
 
@@ -194,7 +235,6 @@ public class LoggingService extends Service {
             startLoggingPebble();
             startLoggingPhone();
             running = true;
-
         }
 
         return Service.START_STICKY;
@@ -242,6 +282,15 @@ public class LoggingService extends Service {
 
         try {
             bufferOutPhone.close();
+            Log.d("SmartDAYS", "File testCapture closed...");
+        } catch (IOException ioe) {
+            Log.d("SmartDAYS", "Error closing file...");
+        } catch (NullPointerException iae) {
+            Log.d("SmartDAYS", "Closing file Phone... null pointer");
+        }
+
+        try {
+            bufferOutSync.close();
             Log.d("SmartDAYS", "File testCapture closed...");
         } catch (IOException ioe) {
             Log.d("SmartDAYS", "Error closing file...");
@@ -305,8 +354,11 @@ public class LoggingService extends Service {
     }
 
     private void sendCommand(int command) {
+        Log.d("SmartDAYS", "Sending command: " + String.valueOf(command));
         PebbleDictionary data = new PebbleDictionary();
         data.addUint8(Constants.COMMAND_KEY, (byte) command);
+        lastPhoneTimestamp = System.currentTimeMillis();
+        data.addBytes(Constants.TIMESTAMP_KEY, ByteBuffer.allocate(8).putLong(lastPhoneTimestamp).array());
         PebbleKit.sendDataToPebbleWithTransactionId(getApplicationContext(), Constants.WATCHAPP_UUID, data, command);
     }
 
@@ -318,6 +370,7 @@ public class LoggingService extends Service {
             MainActivity.serviceMessagesHandler.sendMessage(msg);
         }
         // Then stop
+        synchronizationHandler.removeCallbacks(runnableSynchronization);
         stopSelf();
     }
 }

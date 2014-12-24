@@ -13,7 +13,6 @@ static bool from_watch_app = false;
 typedef struct packet {
   uint64_t timestamp;
   AccelRawData xyz[BUFFER_SIZE];
-//  int16_t xyz[BUFFER_SIZE][3];
 } accel_packet;                                             //if BUFFER_SIZE_BYTES is not a multiple of 8, C appends some bytes to perform memory packing (8 bytes)
 
 static accel_packet to_send;

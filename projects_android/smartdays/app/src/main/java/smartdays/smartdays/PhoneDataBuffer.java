@@ -40,29 +40,31 @@ public class PhoneDataBuffer {
         else {
             newPos = newPos % size;
         }
+        //Log.d("SmartDAYS", "position=" + String.valueOf(position) + " pos=" + String.valueOf(pos) + " newPos=" + String.valueOf(newPos));
         return newPos;
     }
 
     public byte[] getMatchingData(long t) {
         int matchingPosition;
         int i;
-        //int steps = 0;
+        int steps = 0;
         long temp;
         long minDifference;
         long tempDifference;
 
         tempDifference = t - buffer[getIndexAt(-1)].getTimeStamp();                                 // compute the difference between required t and current time (-1)
-        i = (int) (tempDifference / Constants.PHONE_SAMPLING_PERIOD_MS);                             // compute the approximated index in the buffer
+        i = (int) (tempDifference / Constants.PHONE_SAMPLING_PERIOD_MS);                            // compute the approximated index in the buffer
+        //Log.d("SmartDAYS", "tempDiff=" + String.valueOf(tempDifference) + " i=" + String.valueOf(i) + " t=" + String.valueOf(t) + " ts=" + String.valueOf(buffer[getIndexAt(-1)].getTimeStamp()));
 
         minDifference = Math.abs(t - buffer[getIndexAt(i)].getTimeStamp());                         // compute the difference at the approximated starting point
         tempDifference = Math.abs(t - buffer[getIndexAt(--i)].getTimeStamp());                      // compute the difference one position backwards
-        //steps++;
+        steps++;
 
         if (tempDifference < minDifference) {                                                       // search backwards
             while (tempDifference < minDifference) {
                 minDifference = tempDifference;
                 tempDifference = Math.abs(t - buffer[getIndexAt(--i)].getTimeStamp());
-                //steps++;
+                steps++;
             }
             matchingPosition = getIndexAt(++i);
         }
@@ -74,7 +76,7 @@ public class PhoneDataBuffer {
             while (tempDifference < minDifference) {
                 minDifference = tempDifference;
                 tempDifference = Math.abs(t - buffer[getIndexAt(++i)].getTimeStamp());
-                //steps++;
+                steps++;
             }
             matchingPosition = getIndexAt(--i);
         }
