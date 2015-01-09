@@ -3,7 +3,9 @@
 #define DATA_LOG_TAG_ACCELEROMETER 51
 #define BUFFER_SIZE 25
 #define BUFFER_SIZE_BYTES sizeof(uint64_t)+(3*BUFFER_SIZE*sizeof(int16_t))
-#define WORKER_DOTS 10
+#define N_PROGRESS_SYMBOLS 4
+#define PROGRESS_KEY 10
+
 #define FROM_WATCH_APP_KEY 98
 
 static DataLoggingSessionRef s_log_ref;
@@ -24,11 +26,6 @@ static void data_handler(AccelRawData *data, uint32_t num_samples, uint64_t time
   static DataLoggingResult result;
   
   to_send.timestamp = timestamp;
-/*  for (i = 0; i < num_samples; i++) {
-    to_send.xyz[i][0] = (int16_t)data[i].x;                 //save the measures
-    to_send.xyz[i][1] = (int16_t)data[i].y;
-    to_send.xyz[i][2] = (int16_t)data[i].z;
-  }*/
   memcpy(to_send.xyz, data, accel_data_size_bytes);
   result = data_logging_log(s_log_ref, &to_send, 1);        //push the data
                                                             //data are sent to the phone (if available) ~every minute (I don't know how to change that)
@@ -37,9 +34,9 @@ static void data_handler(AccelRawData *data, uint32_t num_samples, uint64_t time
   }
 
   AppWorkerMessage msg_data;
-  msg_data.data0 = packets_sent % WORKER_DOTS;
+  msg_data.data0 = packets_sent % N_PROGRESS_SYMBOLS;
   msg_data.data1 = result;
-  app_worker_send_message(WORKER_DOTS, &msg_data);          //send a message to the application
+  app_worker_send_message(PROGRESS_KEY, &msg_data);          //send a message to the application
 }
 
 void delayed_logging(void *data) {
