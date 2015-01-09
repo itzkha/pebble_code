@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <RelativeLayout
+        android:layout_width="fill_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_margin="5dp">
+
+        <ListView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/listViewCurrent"
+            tools:listitem="@android:layout/simple_list_item_single_choice"
+            android:choiceMode="singleChoice"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentBottom="false"
+            android:layout_alignWithParentIfMissing="false"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentStart="true"
+            android:clickable="true" />
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="0"
+        android:layout_margin="5dp">
+
+        <EditText
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/editTextNewLabel"
+            android:layout_alignParentStart="true"
+            android:layout_alignTop="@+id/buttonNewLabel"
+            android:layout_alignBottom="@+id/buttonNewLabel"
+            android:layout_toLeftOf="@+id/buttonNewLabel"
+            android:layout_margin="5dp"
+            android:layout_alignParentTop="false"
+            android:layout_alignParentLeft="false"
+            android:layout_alignParentBottom="false" />
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="New Label"
+            android:id="@+id/buttonNewLabel"
+            android:layout_alignParentEnd="true"
+            android:layout_margin="5dp"
+            android:layout_alignParentBottom="false" />
+    </RelativeLayout>
+</LinearLayout>

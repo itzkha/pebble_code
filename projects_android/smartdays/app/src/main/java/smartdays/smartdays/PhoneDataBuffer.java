@@ -85,7 +85,7 @@ public class PhoneDataBuffer {
 
 
         ByteBuffer byteBuffer = ByteBuffer.allocate(Constants.PACKET_SIZE);
-        byteBuffer.putLong(buffer[matchingPosition].getTimeStamp());
+        //byteBuffer.putLong(buffer[matchingPosition].getTimeStamp());
         short[] tempValues = buffer[matchingPosition].getXYZ();
         for (i = 0; i < 3; i++) {
             byteBuffer.putShort(tempValues[i]);

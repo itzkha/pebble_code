@@ -13,7 +13,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.PowerManager;
-import android.os.SystemClock;
+import android.provider.Settings;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -26,6 +26,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.TimeZone;
 
 /**
@@ -34,6 +36,7 @@ import java.util.TimeZone;
 public class LoggingService extends Service {
 
     private static LoggingService instance = null;
+    public static Handler serviceMessagesHandler = null;
 
     private NotificationManager notificationManager;
     private int NOTIFICATION = R.string.local_service_started;
@@ -43,8 +46,9 @@ public class LoggingService extends Service {
 
     private BufferedOutputStream bufferOutPebble = null;
     private BufferedOutputStream bufferOutPhoneSynced = null;
-    private BufferedOutputStream bufferOutPhone = null;
-    private BufferedOutputStream bufferOutSync = null;
+    //private BufferedOutputStream bufferOutPhone = null;
+    //private BufferedOutputStream bufferOutSync = null;
+    private BufferedOutputStream bufferOutLabel = null;
     private PhoneDataBuffer phoneDataBuffer;
 
     private SmartDaysPebbleDataLogReceiver dataloggingReceiver;
@@ -52,8 +56,8 @@ public class LoggingService extends Service {
     private PebbleKit.PebbleAckReceiver pebbleAppMessageAckReceiver;
     private PebbleKit.PebbleNackReceiver pebbleAppMessageNackReceiver;
     private PowerManager.WakeLock wakeLock;
-    private Handler synchronizationHandler;
-    Runnable runnableSynchronization;
+    private Handler synchronizationLabellingHandler;
+    private Runnable runnableSynchronizationLabelling;
 
     private long lastPhoneTimestamp = 0;
     private static boolean running = false;
@@ -61,11 +65,14 @@ public class LoggingService extends Service {
     private int stopFailCounter = 0;
     private int timestampFailCounter = 0;
     private int timestampCounter = 0;
+    private int syncMenuFailCounter = 0;
+    private int labelFailCounter = 0;
 
 
     public static boolean isRunning() {
         return running;
     }
+
     public static LoggingService getInstance() {
         return instance;
     }
@@ -95,14 +102,9 @@ public class LoggingService extends Service {
 
             @Override
             public void receiveData(final Context context, final int transactionId, final PebbleDictionary data) {
-
-                switch (data.getInteger(Constants.COMMAND_KEY).intValue()) {
-                    case Constants.START_COMMAND:
-                        Log.d("SmartDAYS", "START received");
-                        break;
-                    case Constants.STOP_COMMAND:
-                        Log.d("SmartDAYS", "STOP received");
-                        break;
+                int command = data.getInteger(Constants.COMMAND_KEY).intValue();
+                Log.d("SmartDAYS", "Receiving command: " + String.valueOf(command));
+                switch (command) {
                     case Constants.TIMESTAMP_COMMAND:
                         Log.d("SmartDAYS", "TIMESTAMP received");
                         //DeltaT = ((Tpe1 + Tpe2) - (Tph1 + Tph2)) / 2      We use Tpe1 = Tpe2
@@ -112,18 +114,25 @@ public class LoggingService extends Service {
                         //Log.d("SmartDAYS", "timestampPEBBLE=" + String.valueOf(timestampPebble) + " currentTime=" + String.valueOf(currentTime) + " lastTime=" + String.valueOf(lastPhoneTimestamp) + " new offset=" + String.valueOf(offsetFromUTC));
                         Log.d("SmartDAYS", "new offset=" + String.valueOf(offsetFromUTC));
                         dataloggingReceiver.setOffset(offsetFromUTC);
-                        try {
-                            bufferOutSync.write(ByteBuffer.allocate(8).putLong(offsetFromUTC).array());
-                        }
-                        catch (IOException ioe) {}
+                        //if (bufferOutSync != null) {
+                        //    try {
+                        //        bufferOutSync.write(ByteBuffer.allocate(8).putLong(offsetFromUTC).array());
+                        //    }
+                        //    catch (IOException ioe) {
+                        //    }
+                        //}
                         timestampCounter++;
                         Log.d("SmartDAYS", "counter: " + String.valueOf(timestampCounter));
-                        if (timestampCounter < Constants.NUMBER_OF_SYNCS) {
-                            sendCommand(Constants.TIMESTAMP_COMMAND);
-                        }
-                        else {
-                            timestampCounter = 0;
-                        }
+                        break;
+                    case Constants.SYNC_MENU_ITEM_COMMAND:
+                        Log.d("SmartDAYS", "Receiving request for label items");
+                        askActivity(Constants.SYNC_MENU_ITEM_COMMAND);
+                        break;
+                    case Constants.LABEL_COMMAND:
+                        String label = data.getString(Constants.LABEL_KEY);
+                        Log.d("SmartDAYS", "Received label: " + label);
+                        logLabel(label);
+                        askActivity(label);
                         break;
                 }
                 PebbleKit.sendAckToPebble(getApplicationContext(), transactionId);
@@ -139,8 +148,6 @@ public class LoggingService extends Service {
                 switch (transactionId) {
                     case Constants.START_COMMAND:
                         startFailCounter = 0;
-                        // ask for timestamp shift
-                        sendCommand(Constants.TIMESTAMP_COMMAND);
                         break;
                     case Constants.STOP_COMMAND:
                         stopFailCounter = 0;
@@ -148,6 +155,13 @@ public class LoggingService extends Service {
                         break;
                     case Constants.TIMESTAMP_COMMAND:
                         timestampFailCounter = 0;
+                        break;
+                    case Constants.SYNC_MENU_ITEM_COMMAND:
+                        syncMenuFailCounter = 0;
+                        askActivity(Constants.SYNC_MENU_ITEM_COMMAND);
+                        break;
+                    case Constants.LABEL_COMMAND:
+                        labelFailCounter = 0;
                         break;
                 }
             }
@@ -188,32 +202,64 @@ public class LoggingService extends Service {
                             Toast.makeText(instance, R.string.pebble_not_responding, Toast.LENGTH_SHORT).show();
                         }
                         break;
+                    case Constants.SYNC_MENU_ITEM_COMMAND:
+                        syncMenuFailCounter++;
+                        if (syncMenuFailCounter < Constants.MAX_FAILS) {
+                            askActivity(Constants.SYNC_MENU_ITEM_COMMAND);
+                        } else {
+                            // Tell the user the Pebble is not responding
+                            Toast.makeText(instance, R.string.pebble_not_responding, Toast.LENGTH_SHORT).show();
+                        }
+                        break;
+                    case Constants.LABEL_COMMAND:
+                        labelFailCounter++;
+                        if (labelFailCounter < Constants.MAX_FAILS) {
+                            sendCommand(Constants.LABEL_COMMAND);
+                        } else {
+                            // Tell the user the Pebble is not responding
+                            Toast.makeText(instance, R.string.pebble_not_responding, Toast.LENGTH_SHORT).show();
+                        }
+                        break;
                 }
             }
         };
         PebbleKit.registerReceivedNackHandler(this, pebbleAppMessageNackReceiver);
+        //------------------------------------------------------------------------------------------
 
-        synchronizationHandler = new Handler();
-        runnableSynchronization = new Runnable() {
+        synchronizationLabellingHandler = new Handler();
+        runnableSynchronizationLabelling = new Runnable() {
             @Override
             public void run() {
                 // ask for timestamp shift
                 PebbleKit.startAppOnPebble(getApplicationContext(), Constants.WATCHAPP_UUID);
-                sendCommand(Constants.TIMESTAMP_COMMAND);
-                synchronizationHandler.postDelayed(this, Constants.SYNCHRONIZATION_PERIOD);
+
+                if (timestampCounter <= Constants.NUMBER_OF_SYNCS) {
+                    sendCommand(Constants.TIMESTAMP_COMMAND);                               // ask for timestamp
+                    synchronizationLabellingHandler.postDelayed(this, Constants.SYNCHRONIZATION_LABELLING_SHORT_PERIOD);
+                } else {
+                    timestampCounter = 0;
+                    sendCommand(Constants.LABEL_COMMAND);                                   // ask for labels
+                    synchronizationLabellingHandler.postDelayed(this, Constants.SYNCHRONIZATION_LABELLING_LONG_PERIOD);
+                }
             }
         };
-        synchronizationHandler.postDelayed(runnableSynchronization, Constants.SYNCHRONIZATION_PERIOD);
-
+        synchronizationLabellingHandler.postDelayed(runnableSynchronizationLabelling, Constants.SYNCHRONIZATION_LABELLING_SHORT_PERIOD);         // Request first timestamp
+        //------------------------------------------------------------------------------------------
 
         try {
-            File root = Environment.getExternalStorageDirectory();
+            File appDir = new File(Environment.getExternalStorageDirectory() + "/smartdays");
+            if (!appDir.exists()) {
+                appDir.mkdir();
+            }
 
-            // Create the file
-            bufferOutPebble = new BufferedOutputStream(new FileOutputStream(new File(root, "testPebbleAccel")));
-            bufferOutPhoneSynced = new BufferedOutputStream(new FileOutputStream(new File(root, "testPhoneSyncedAccel")));
-            bufferOutPhone = new BufferedOutputStream(new FileOutputStream(new File(root, "testPhoneAccel")));
-            bufferOutSync = new BufferedOutputStream(new FileOutputStream(new File(root, "testSync")));
+            // Create the files
+            String deviceId = Settings.Secure.getString(this.getContentResolver(), Settings.Secure.ANDROID_ID);
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+
+            bufferOutLabel = new BufferedOutputStream(new FileOutputStream(new File(appDir, "labels_" + deviceId + "_" + sdf.format(new Date()))));
+            logLabel("No activity");
+            bufferOutPebble = new BufferedOutputStream(new FileOutputStream(new File(appDir, "pebbleAccel_" + deviceId + "_" + sdf.format(new Date()))));
+            bufferOutPhoneSynced = new BufferedOutputStream(new FileOutputStream(new File(appDir, "phoneAccel_" + deviceId + "_" + sdf.format(new Date()))));
             phoneDataBuffer = new PhoneDataBuffer(Constants.BUFFER_SIZE);
 
             Log.d("SmartDAYS", "Files created...");
@@ -221,6 +267,25 @@ public class LoggingService extends Service {
         } catch (IOException ioe) {
             Log.d("SmartDAYS", "Error creating file...");
         }
+
+        //------------------------------------------------------------------------------------------
+        serviceMessagesHandler = new Handler() {
+            @Override
+            public void handleMessage(Message msg) {
+                Log.d("SmartDAYS", String.format("Service received message: msg=%s", msg));
+
+                switch (msg.what) {
+                    case Constants.LABEL_COMMAND:
+                        logLabel(msg.obj.toString());
+                        break;
+                    case Constants.SYNC_MENU_ITEM_COMMAND:
+                        sendCommand(msg.obj.toString());
+                        break;
+                }
+                super.handleMessage(msg);
+            }
+        };
+
         running = false;
     }
 
@@ -230,7 +295,8 @@ public class LoggingService extends Service {
 
         if (!running) {
             dataloggingReceiver = new SmartDaysPebbleDataLogReceiver(Constants.WATCHAPP_UUID, bufferOutPebble, bufferOutPhoneSynced, phoneDataBuffer);
-            phoneSensorEventListener = new PhoneSensorEventListener(phoneDataBuffer, bufferOutPhone);
+            //phoneSensorEventListener = new PhoneSensorEventListener(phoneDataBuffer, bufferOutPhone);
+            phoneSensorEventListener = new PhoneSensorEventListener(phoneDataBuffer);
 
             startLoggingPebble();
             startLoggingPhone();
@@ -248,6 +314,10 @@ public class LoggingService extends Service {
         // Tell the user we stopped.
         Toast.makeText(this, R.string.local_service_stopped, Toast.LENGTH_SHORT).show();
 
+        //------------------------------------------------------------------------------------------ Stop alarms
+        synchronizationLabellingHandler.removeCallbacks(runnableSynchronizationLabelling);
+        synchronizationLabellingHandler = null;
+
         //------------------------------------------------------------------------------------------ Stop acquisition receivers
         try {
             unregisterReceiver(dataloggingReceiver);
@@ -264,39 +334,50 @@ public class LoggingService extends Service {
         //------------------------------------------------------------------------------------------ Close files
         try {
             bufferOutPebble.close();
-            Log.d("SmartDAYS", "File testCapture closed...");
+            Log.d("SmartDAYS", "bufferOutPebble closed...");
         } catch (IOException ioe) {
-            Log.d("SmartDAYS", "Error closing file...");
+            Log.d("SmartDAYS", "Error closing bufferOutPebble...");
         } catch (NullPointerException iae) {
-            Log.d("SmartDAYS", "Closing file Pebble... null pointer");
+            Log.d("SmartDAYS", "Closing bufferOutPebble... null pointer");
         }
 
         try {
             bufferOutPhoneSynced.close();
-            Log.d("SmartDAYS", "File testCapture closed...");
+            Log.d("SmartDAYS", "bufferOutPhoneSynced closed...");
         } catch (IOException ioe) {
-            Log.d("SmartDAYS", "Error closing file...");
+            Log.d("SmartDAYS", "Error closing bufferOutPhoneSynced...");
         } catch (NullPointerException iae) {
-            Log.d("SmartDAYS", "Closing file Phone Synced... null pointer");
+            Log.d("SmartDAYS", "Closing bufferOutPhoneSynced... null pointer");
         }
 
         try {
-            bufferOutPhone.close();
+            bufferOutLabel.close();
             Log.d("SmartDAYS", "File testCapture closed...");
-        } catch (IOException ioe) {
-            Log.d("SmartDAYS", "Error closing file...");
-        } catch (NullPointerException iae) {
-            Log.d("SmartDAYS", "Closing file Phone... null pointer");
+        }
+        catch (IOException ioe) {
+            Log.d("SmartDAYS", "Error closing bufferOutLabel...");
+        }
+        catch (NullPointerException iae) {
+            Log.d("SmartDAYS", "Closing bufferOutLabel... null pointer");
         }
 
-        try {
-            bufferOutSync.close();
-            Log.d("SmartDAYS", "File testCapture closed...");
-        } catch (IOException ioe) {
-            Log.d("SmartDAYS", "Error closing file...");
-        } catch (NullPointerException iae) {
-            Log.d("SmartDAYS", "Closing file Phone... null pointer");
-        }
+        //try {
+        //    bufferOutPhone.close();
+        //    Log.d("SmartDAYS", "bufferOutPhone closed...");
+        //} catch (IOException ioe) {
+        //    Log.d("SmartDAYS", "Error closing bufferOutPhone...");
+        //} catch (NullPointerException iae) {
+        //    Log.d("SmartDAYS", "Closing bufferOutPhone... null pointer");
+        //}
+
+        //try {
+        //    bufferOutSync.close();
+        //   Log.d("SmartDAYS", "bufferOutSync closed...");
+        //} catch (IOException ioe) {
+        //    Log.d("SmartDAYS", "Error closing bufferOutSync...");
+        //} catch (NullPointerException iae) {
+        //    Log.d("SmartDAYS", "Closing bufferOutSync... null pointer");
+        //}
 
         //------------------------------------------------------------------------------------------ Stop communication with the Pebble
         unregisterReceiver(pebbleAppMessageDataReceiver);
@@ -343,9 +424,7 @@ public class LoggingService extends Service {
         // Register DataLogging Receiver
         PebbleKit.registerDataLogReceiver(this, dataloggingReceiver);
 
-        PebbleDictionary data = new PebbleDictionary();
-        data.addUint8(Constants.COMMAND_KEY, (byte) Constants.START_COMMAND);
-        PebbleKit.sendDataToPebbleWithTransactionId(getApplicationContext(), Constants.WATCHAPP_UUID, data, Constants.START_COMMAND);
+        sendCommand(Constants.START_COMMAND);
     }
 
     private void startLoggingPhone() {
@@ -358,20 +437,49 @@ public class LoggingService extends Service {
         PebbleDictionary data = new PebbleDictionary();
         data.addUint8(Constants.COMMAND_KEY, (byte) command);
         lastPhoneTimestamp = System.currentTimeMillis();
-        data.addBytes(Constants.TIMESTAMP_KEY, ByteBuffer.allocate(8).putLong(lastPhoneTimestamp).array());
         PebbleKit.sendDataToPebbleWithTransactionId(getApplicationContext(), Constants.WATCHAPP_UUID, data, command);
     }
 
+    private void sendCommand(String item) {
+        Log.d("SmartDAYS", "Sending command: " + String.valueOf(Constants.SYNC_MENU_ITEM_COMMAND) + " menuItem: " + item);
+        PebbleDictionary data = new PebbleDictionary();
+        data.addString(Constants.MENU_ITEM_KEY, item);
+        PebbleKit.sendDataToPebbleWithTransactionId(getApplicationContext(), Constants.WATCHAPP_UUID, data, Constants.SYNC_MENU_ITEM_COMMAND);
+    }
+
     private void stop() {
-        if (MainActivity.serviceMessagesHandler != null) {
-            // Tell the user we stopped
-            Message msg = Message.obtain();
-            msg.what = Constants.SERVICE_STOPPED;
-            MainActivity.serviceMessagesHandler.sendMessage(msg);
-        }
+        askActivity(Constants.SERVICE_STOPPED);
+
         // Then stop
-        synchronizationHandler.removeCallbacks(runnableSynchronization);
         stopSelf();
     }
+
+    private void askActivity(int command) {
+        if(MainActivity.serviceMessagesHandler != null) {
+            Message msg = Message.obtain();
+            msg.what = command;
+            MainActivity.serviceMessagesHandler.sendMessage(msg);
+        }
+    }
+
+    private void askActivity(String label) {
+        if(MainActivity.serviceMessagesHandler != null) {
+            Message msg = Message.obtain();
+            msg.what = Constants.LABEL_COMMAND;
+            msg.obj = label;
+            MainActivity.serviceMessagesHandler.sendMessage(msg);
+        }
+    }
+
+    private void logLabel(String label) {
+        try {
+            String line = label.concat("," + String.valueOf(System.currentTimeMillis()) + "\n");
+            bufferOutLabel.write(line.getBytes());
+            bufferOutLabel.flush();
+        }
+        catch (IOException ioe) {
+        }
+    }
+
 }
 

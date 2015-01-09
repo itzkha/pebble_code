@@ -14,29 +14,21 @@
 
         <RelativeLayout
             android:layout_width="fill_parent"
-            android:layout_height="wrap_content">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/textView" />
-        </RelativeLayout>
-
-        <RelativeLayout
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:layout_margin="5dp">
 
             <Button
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Start"
                 android:id="@+id/buttonStart"
-                android:layout_alignParentLeft="true"
-                android:layout_alignParentStart="true"
+                android:layout_alignParentStart="false"
                 android:enabled="false"
                 android:layout_column="0"
                 android:layout_row="1"
-                android:layout_columnSpan="2" />
+                android:layout_columnSpan="2"
+                android:layout_toLeftOf="@+id/buttonStop"
+                android:layout_margin="5dp" />
 
             <Button
                 android:layout_width="wrap_content"
@@ -44,52 +36,99 @@
                 android:text="Stop"
                 android:id="@+id/buttonStop"
                 android:layout_alignParentRight="true"
-                android:layout_alignParentEnd="true"
+                android:layout_alignParentEnd="false"
                 android:enabled="false"
                 android:layout_column="2"
                 android:layout_row="1"
-                android:layout_columnSpan="2" />
-        </RelativeLayout>
+                android:layout_columnSpan="2"
+                android:layout_margin="5dp" />
 
-        <RelativeLayout
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content">
-
-            <ListView
-                android:layout_width="wrap_content"
-                android:layout_height="200dp"
-                android:id="@+id/listActivities"
-                android:choiceMode="singleChoice"
-                android:layout_alignParentTop="false"
-                tools:listitem="@android:layout/simple_list_item_2"
-                android:drawSelectorOnTop="true"
-                android:longClickable="true" />
-        </RelativeLayout>
-
-        <RelativeLayout
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content">
-
-            <EditText
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:id="@+id/newActivity"
-                android:layout_toLeftOf="@+id/buttonAddActivity"
-                android:editable="true"
-                android:enabled="true"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:text="Logging"
+                android:id="@+id/textViewService"
+                android:layout_alignParentStart="false"
+                android:layout_alignParentLeft="true"
+                android:layout_alignTop="@+id/buttonStart"
+                android:layout_alignBottom="@+id/buttonStart"
+                android:layout_toLeftOf="@+id/buttonStart"
+                android:layout_margin="5dp"
+                android:gravity="center_vertical" />
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="5dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:id="@+id/textViewMessage"
+                android:layout_margin="5dp"
+                android:layout_alignParentLeft="true"
+                android:layout_alignParentRight="true"
+                android:text="Logging stopped..." />
+        </RelativeLayout>
+
+        <Space
+            android:layout_width="fill_parent"
+            android:layout_height="100dp" />
+
+        <GridLayout
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:rowCount="2"
+            android:columnCount="2"
+            android:layout_margin="5dp"
+            android:layout_marginTop="20dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:id="@+id/textViewLabel"
                 android:layout_alignParentStart="true"
-                android:layout_alignBottom="@+id/buttonAddActivity"
-                android:layout_alignTop="@+id/buttonAddActivity" />
+                android:layout_alignTop="@+id/buttonCurrentActivity"
+                android:layout_alignBottom="@+id/buttonCurrentActivity"
+                android:layout_toLeftOf="@+id/buttonCurrentActivity"
+                android:layout_margin="5dp"
+                android:layout_column="0"
+                android:layout_columnSpan="1"
+                android:layout_row="0"
+                android:text="Current activity:"
+                android:gravity="center_vertical" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:text="No activity"
+                android:id="@+id/textViewCurrentActivity"
+                android:layout_columnSpan="1"
+                android:layout_row="0"
+                android:layout_column="1"
+                android:layout_margin="5dp"
+                android:gravity="center_vertical"
+                android:layout_gravity="fill_horizontal" />
 
             <Button
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="New Activity"
-                android:id="@+id/buttonAddActivity"
-                android:layout_alignParentTop="true"
+                android:text="Change"
+                android:id="@+id/buttonCurrentActivity"
                 android:layout_alignParentEnd="true"
-                android:enabled="true" />
-        </RelativeLayout>
+                android:layout_margin="5dp"
+                android:layout_column="1"
+                android:layout_columnSpan="1"
+                android:layout_row="1"
+                android:layout_rowSpan="1"
+                android:layout_gravity="fill_horizontal" />
+
+        </GridLayout>
 
     </LinearLayout>
 

@@ -20,22 +20,22 @@ public class PhoneSensorEventListener implements SensorEventListener {
     private long previousTimeStamp;
     private long firstTimeStampElapsed;
     private long firstTimeStampReal;
-    private BufferedOutputStream bufferOutPhone;
+    //private BufferedOutputStream bufferOutPhone;
     private boolean firstTime;
 
     public PhoneSensorEventListener(PhoneDataBuffer b) {
         dataBuffer = b;
         previousTimeStamp = 0;
-        bufferOutPhone = null;
+        //bufferOutPhone = null;
         firstTime = true;
     }
 
-    public PhoneSensorEventListener(PhoneDataBuffer b, BufferedOutputStream bop) {
-        dataBuffer = b;
-        previousTimeStamp = 0;
-        bufferOutPhone = bop;
-        firstTime = true;
-    }
+    //public PhoneSensorEventListener(PhoneDataBuffer b, BufferedOutputStream bop) {
+    //    dataBuffer = b;
+    //   previousTimeStamp = 0;
+    //    bufferOutPhone = bop;
+    //    firstTime = true;
+    //}
 
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
@@ -56,17 +56,17 @@ public class PhoneSensorEventListener implements SensorEventListener {
             PhoneData temp = new PhoneData(actualTimeStamp, sensorEvent.values);
             dataBuffer.putData(temp);
 
-            if (bufferOutPhone != null) {
-                ByteBuffer byteBuffer = ByteBuffer.allocate(Constants.PACKET_SIZE);
-                byteBuffer.putLong(actualTimeStamp);
-                for (int i = 0; i < 3; i++) {
-                    byteBuffer.putShort((short) (100 * sensorEvent.values[i]));
-                }
-                try {
-                    bufferOutPhone.write(byteBuffer.array());
-                } catch (IOException ioe) {
-                }
-            }
+            //if (bufferOutPhone != null) {
+            //    ByteBuffer byteBuffer = ByteBuffer.allocate(Constants.PACKET_SIZE);
+            //    byteBuffer.putLong(actualTimeStamp);
+            //    for (int i = 0; i < 3; i++) {
+            //        byteBuffer.putShort((short) (100 * sensorEvent.values[i]));
+            //    }
+            //    try {
+            //        bufferOutPhone.write(byteBuffer.array());
+            //    } catch (IOException ioe) {
+            //    }
+            //}
         }
 
     }

@@ -4,12 +4,11 @@ package smartdays.smartdays;
 // Saves the buffer to a file using a service
 
 import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.os.SystemClock;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.ActionMode;
 import android.view.Menu;
@@ -22,23 +21,24 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.getpebble.android.kit.PebbleKit;
 import com.getpebble.android.kit.util.PebbleDictionary;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.ArrayList;
-import java.util.TimeZone;
 
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements  CurrentActivityDialog.NoticeDialogListener {
 
     private Intent intent;
     private MainActivity instance;
     public static Handler serviceMessagesHandler = null;
-    private ActionMode mActionMode;
-    private int selectedActivity;
+    private int menuItemInitIndex = 0;
+    private ArrayList<String> activities;
+    private CurrentActivityDialog currentActivityDialog;
+    private TextView textViewCurrentActivity;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,17 +49,22 @@ public class MainActivity extends Activity {
         intent = new Intent(this, LoggingService.class);
 
         //------------------------------------------------------------------------------------------
-        final TextView textView = (TextView) findViewById(R.id.textView);
-        textView.setText("");
+        final TextView textViewMessage = (TextView) findViewById(R.id.textViewMessage);
+        textViewMessage.setText("");
+
+        textViewCurrentActivity = (TextView) findViewById(R.id.textViewCurrentActivity);
+        textViewCurrentActivity.setText("No activity");
 
         //------------------------------------------------------------------------------------------
         final Button buttonStart = (Button) findViewById(R.id.buttonStart);
         final Button buttonStop = (Button) findViewById(R.id.buttonStop);
 
         if (LoggingService.isRunning()) {
+            textViewMessage.setText("Logging started...");
             buttonStart.setEnabled(false);
             buttonStop.setEnabled(true);
         } else {
+            textViewMessage.setText("Logging stopped...");
             buttonStart.setEnabled(true);
             buttonStop.setEnabled(false);
         }
@@ -73,11 +78,11 @@ public class MainActivity extends Activity {
 
                         //-------------------------------------------------------------------------- Try to start the service
                         startService(intent);
-                        textView.setText("Service started...");
+                        textViewMessage.setText("Logging started...");
                         buttonStart.setEnabled(false);
                         buttonStop.setEnabled(true);
                     } else {
-                        textView.setText("Watch is not connected.\nConnect to a Pebble first");
+                        textViewMessage.setText("Watch is not connected.\nConnect to a Pebble first");
                     }
                 }
             }
@@ -97,110 +102,85 @@ public class MainActivity extends Activity {
         });
 
         //------------------------------------------------------------------------------------------
-        ArrayList<String> activities = new ArrayList<String>(20);
-        final ListView listActivities;
-        listActivities = (ListView) findViewById(R.id.listActivities);
-        selectedActivity = -1;
+        activities = new ArrayList<String>(20);
+        activities.add("Breakfast");
+        activities.add("Coffee");
+        activities.add("Dinner");
+        activities.add("Lunch");
+        activities.add("No activity");
+        activities.add("Rest");
+        activities.add("Run");
+        activities.add("Walk");
+        activities.add("Work");
 
-        final ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, android.R.id.text1, activities);
-        listActivities.setAdapter(adapter);
-        listActivities.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                selectedActivity = position;
-                String itemValue = (String)listActivities.getItemAtPosition(selectedActivity);
-                Log.d("SmartDAYS", "Position:" + selectedActivity + " ListItem:" + itemValue);
+        currentActivityDialog = new CurrentActivityDialog();
+        currentActivityDialog.setActivities(activities);
+        final Button buttonCurrentActivity = (Button) findViewById(R.id.buttonCurrentActivity);
+        buttonCurrentActivity.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                currentActivityDialog.show(getFragmentManager(), "Current activity");
             }
         });
-
-        //------------------------------------------------------------------------------------------
-        final ActionMode.Callback mActionModeCallback = new ActionMode.Callback() {
-            // Called when the action mode is created; startActionMode() was called
-            @Override
-            public boolean onCreateActionMode(ActionMode mode, Menu menu) {
-                // Inflate a menu resource providing context menu items
-                MenuInflater inflater = mode.getMenuInflater();
-                inflater.inflate(R.menu.context_menu, menu);
-                mode.setTitle(adapter.getItem(selectedActivity));
-                return true;
-            }
-
-            // Called each time the action mode is shown. Always called after onCreateActionMode, but
-            // may be called multiple times if the mode is invalidated.
-            @Override
-            public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
-                return false; // Return false if nothing is done
-            }
-
-            // Called when the user selects a contextual menu item
-            @Override
-            public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
-                switch (item.getItemId()) {
-                    case R.id.menu_delete:
-                        Log.d("SmartDAYS", "Delete!!!");
-                        adapter.remove(adapter.getItem(selectedActivity));
-                        mode.finish();
-                        return true;
-                    default:
-                        return false;
-                }
-            }
-
-            // Called when the user exits the action mode
-            @Override
-            public void onDestroyActionMode(ActionMode mode) {
-                mActionMode = null;
-            }
-        };
-
-        //------------------------------------------------------------------------------------------
-        listActivities.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
-            @Override
-            public boolean onItemLongClick(AdapterView<?> av, View v, int pos, long id) {
-                if (mActionMode != null) {
-                    return false;
-                }
-                selectedActivity = pos;
-                mActionMode = instance.startActionMode(mActionModeCallback);
-                v.setSelected(true);
-                return true;
-            }
-        });
-
-        //------------------------------------------------------------------------------------------
-        final EditText newActivity = (EditText) findViewById(R.id.newActivity);
-        Button buttonAddActivity = (Button) findViewById(R.id.buttonAddActivity);
-        buttonAddActivity.setOnClickListener(new View.OnClickListener() {
- 			@Override
-			public void onClick(View arg0) {
-                String temp = newActivity.getText().toString().trim();
-                Log.d("SmartDAYS", "You entered: " + temp);
-                if (temp.length() > 0) {
-                    adapter.add(temp);
-                    newActivity.getText().clear();
-                    adapter.notifyDataSetChanged();
-                    listActivities.setSelection(adapter.getCount()-1);
-                }
-			}
-		});
 
         //------------------------------------------------------------------------------------------
         serviceMessagesHandler = new Handler() {
 		    @Override
 		    public void handleMessage(Message msg) {
-       			Log.d("SmartDAYS", String.format("Handler.handleMessage(): msg=%s", msg));
+       			Log.d("SmartDAYS", String.format("Activity received message: msg=%s", msg));
 
-                if (msg.what == Constants.SERVICE_STOPPED) {
-                    textView.setText("Service stopped...");
-                    buttonStart.setEnabled(true);
-                    buttonStop.setEnabled(false);
+                switch (msg.what) {
+                    case Constants.SERVICE_STOPPED:
+                        textViewMessage.setText("Logging stopped...");
+                        buttonStart.setEnabled(true);
+                        buttonStop.setEnabled(false);
+                        break;
+                    case Constants.SYNC_MENU_ITEM_COMMAND:
+                        if (menuItemInitIndex < activities.size()) {
+                            askService(Constants.SYNC_MENU_ITEM_COMMAND, activities.get(menuItemInitIndex));
+                            Log.d("SmartDAYS", "Asking to send: " + activities.get(menuItemInitIndex));
+                            menuItemInitIndex++;
+                        }
+                        else {
+                            menuItemInitIndex = 0;
+                        }
+                        break;
+                    case Constants.LABEL_COMMAND:
+                        textViewCurrentActivity.setText(msg.obj.toString());
+                        break;
                 }
+
     			super.handleMessage(msg);
     		}
     	};
 
         //------------------------------------------------------------------------------------------
         Log.d("SmartDAYS", "Ready...");
+
+    }
+
+    protected void onDestroy() {
+
+    }
+
+    private boolean askService(int command, String text) {
+        if(LoggingService.serviceMessagesHandler != null) {
+            Message msg = Message.obtain();
+            msg.what = command;
+            msg.obj = text;
+            LoggingService.serviceMessagesHandler.sendMessage(msg);
+            return true;
+        }
+        else {
+            Toast.makeText(instance, R.string.start_service_first, Toast.LENGTH_SHORT).show();
+            return false;
+        }
+    }
+
+    @Override
+    public void onDialogPositiveClick(String activity) {
+        if (askService(Constants.LABEL_COMMAND, activity)) {
+            textViewCurrentActivity.setText(activity);
+        }
 
     }
 
