@@ -1,0 +1,11 @@
+import numpy as np
+
+parsed_z = []
+with open("?users/zackzhu/to_del.csv") as csvfile:
+    myreader = csv.reader(csvfile,delimiter=",")
+    for row in myreader:
+        parsed_z.append(int(row[2]))
+
+print np.mean(parsed_z)
+print np.var(parsed_z)
+

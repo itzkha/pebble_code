@@ -1,0 +1,74 @@
+// // callback function for location success
+// function locaitonSuccess(pos) {
+//     coordinates = pos.coords;
+//     obtainedLoc = true;
+// }
+
+// // callback function for location failed
+// function locationError(err) {
+//     console.warn('location error (' + err.code + '): ' + err.message);
+//     obtainedLoc = false;
+// }
+
+var locationOptions = { "timeout": 15000, "maximumAge": 60000 }; 
+var obtainedLoc = new Boolean();
+var coordinates;
+
+// Set callback for the app ready event
+Pebble.addEventListener("ready",
+                        function(e) {
+                            console.log("connect!" + e.ready);
+			    // locationWatcher = window.navigator.geolocaiton.watchPosition(locationSuccess, locationError, locationOptions);
+                            console.log(e.type);
+                        });
+
+Pebble.addEventListener("appmessage",
+  function(e) {
+
+      var response;
+
+      var req = new XMLHttpRequest();
+      console.log("message received from pebble");
+      // window.navigator.geolocation.getCurrentPosition(locationSuccess,
+      // 						      locationError,
+      // 						      locationOptions);
+    
+      req.open('POST', "https://actikeshi.appspot.com/marker", true);
+      //req.open("POST", "http://localhost:9080/marker",true); //somehow local posts do not work?
+      req.setRequestHeader("Content-type","application/x-www-form-urlencoded");
+    
+      req.onload = function (e) {
+	  if (req.status == 200) {
+	      Pebble.sendAppMessage({
+		  "serverConfirmed": 1
+	      });
+	  } else {
+	      Pebble.sendAppMessage({
+		  "serverConfirmed": 0
+	      });
+	  }
+	  console.log("the returned status is: " +  req.status.toString());
+      }
+
+      console.log(obtainedLoc);
+      if (obtainedLoc == true) {
+ 	  console.log("oboc=true");
+	  var sendString = "accountToken="+Pebble.getAccountToken()+
+	      "&markerContent="+JSON.stringify(e.payload) + 
+	      "&lat="+coordinates.latitude + 
+	      "&lon="+coordinates.longitude;
+
+	  console.log(sendString);
+      } else {
+	  console.log("oboc=false");
+	  var sendString = "accountToken="+Pebble.getAccountToken()+"&markerContent="+JSON.stringify(e.payload);
+	  
+	  console.log(sendString);
+      }
+      
+      req.send(sendString);
+
+      
+      console.log(sendString);
+  }
+);
