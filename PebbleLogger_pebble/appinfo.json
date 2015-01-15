@@ -1,0 +1,36 @@
+{
+  "uuid": "df64aa1a-e41f-4f9c-b234-571e49e43874",
+  "shortName": "Pebble Logger",
+  "longName": "Pebble Accelerometer Logger",
+  "capabilities": [ "location" ],
+  "companyName": "ETH Zurich",
+  "versionCode": 2,
+  "versionLabel": "2.0.0",
+  "watchapp": {
+    "watchface": false
+  },
+  "appKeys": {
+    "startAct": 1,
+    "stopAct": 0,
+    "cancelStartAct": 3,
+    "cancelStopAct": 2,
+    "serverConfirmed": 5,
+    "gpsConfirmed": 6,
+    "phoneConfirmed": 7,
+    "activityRowIndex": 10
+  },
+  "resources": {
+    "media": [
+	{
+	  "type": "png",
+	  "name": "IMAGE_ACTION_ICON_PLAY",
+	  "file": "images/play.png"
+	},
+	{
+	  "type": "png",
+	  "name": "IMAGE_ACTION_ICON_STOP",
+	  "file": "images/stop.png"
+	}
+    ]
+  }
+}

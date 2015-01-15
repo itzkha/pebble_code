@@ -1,0 +1,17 @@
+{
+  "uuid": "df64aa1a-e41f-4f9c-b234-571e49e43874",
+  "shortName": "Pebble Logger",
+  "longName": "Logger for Accelerometer from Pebble",
+  "companyName": "ETH Zurich",
+  "versionCode": 1,
+  "versionLabel": "1.0.0",
+  "watchapp": {
+    "watchface": false
+  },
+  "appKeys": {
+    "dummy": 0
+  },
+  "resources": {
+    "media": []
+  }
+}
