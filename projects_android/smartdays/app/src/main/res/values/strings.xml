@@ -6,4 +6,8 @@
     <string name="local_service_started">Pebble logging service started</string>
     <string name="local_service_stopped">Pebble logging service stopped</string>
     <string name="local_service_label">Pebble logging</string>
+    <string name="pebble_not_responding">Pebble did not respond</string>
+    <string name="menu_delete">Delete</string>
+    <string name="start_service_first">Start the service first</string>
+
 </resources>

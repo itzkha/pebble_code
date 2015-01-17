@@ -3,10 +3,12 @@ package smartdays.smartdays;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
+import android.util.Log;
 
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Date;
 
 
 /**
@@ -16,40 +18,55 @@ public class PhoneSensorEventListener implements SensorEventListener {
 
     private PhoneDataBuffer dataBuffer;
     private long previousTimeStamp;
-    private BufferedOutputStream bufferOutPhone;
+    private long firstTimeStampElapsed;
+    private long firstTimeStampReal;
+    //private BufferedOutputStream bufferOutPhone;
+    private boolean firstTime;
 
     public PhoneSensorEventListener(PhoneDataBuffer b) {
         dataBuffer = b;
         previousTimeStamp = 0;
+        //bufferOutPhone = null;
+        firstTime = true;
     }
 
-    public PhoneSensorEventListener(PhoneDataBuffer b, BufferedOutputStream bop) {
-        dataBuffer = b;
-        previousTimeStamp = 0;
-        bufferOutPhone = bop;
-    }
+    //public PhoneSensorEventListener(PhoneDataBuffer b, BufferedOutputStream bop) {
+    //    dataBuffer = b;
+    //   previousTimeStamp = 0;
+    //    bufferOutPhone = bop;
+    //    firstTime = true;
+    //}
 
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
-        long systemTimeStamp = System.currentTimeMillis();                                          // getting system time here because sensorEvent.timestamp (depending on hardware)
+        if (firstTime) {
+            firstTimeStampElapsed = sensorEvent.timestamp;
+            firstTimeStampReal = System.currentTimeMillis();
+            firstTime = false;
+        }
+        else if ((sensorEvent.timestamp - previousTimeStamp) >= Constants.PHONE_SAMPLING_PERIOD_NS) {    // discards too frequent measures (< 20 mS)
+            previousTimeStamp = sensorEvent.timestamp;
+
+            long actualTimeStamp = firstTimeStampReal + ((sensorEvent.timestamp - firstTimeStampElapsed) / 1000000);
+                                                                                                    // computing the actual timestamp -> sensorEvent.timestamp (depending on hardware)
                                                                                                     // does not yield system time but elapsed time since boot
+            //long actualTimeStamp = System.currentTimeMillis() + ((sensorEvent.timestamp - System.nanoTime()) / 1000000L);
+            //Log.d("SmartDAYS", "timestamp=" + String.valueOf(actualTimeStamp) + " firstTMS=" + String.valueOf(firstTimeStampReal) + " sensorT=" + String.valueOf(sensorEvent.timestamp) + " firstTNS=" + String.valueOf(firstTimeStampElapsed));
 
-        if ((systemTimeStamp - previousTimeStamp) >= Constants.TOO_FREQUENT_MEASURES) {             // discards too frequent measures (< 16 mS)
-            previousTimeStamp = systemTimeStamp;
-
-            PhoneData temp = new PhoneData(systemTimeStamp, sensorEvent.values);
+            PhoneData temp = new PhoneData(actualTimeStamp, sensorEvent.values);
             dataBuffer.putData(temp);
 
-            ByteBuffer byteBuffer = ByteBuffer.allocate(Constants.PACKET_SIZE);
-            byteBuffer.putLong(systemTimeStamp);
-            for (int i = 0; i < 3; i++) {
-                byteBuffer.putShort((short) (100*sensorEvent.values[i]));
-            }
-            try {
-                bufferOutPhone.write(byteBuffer.array());
-            }
-            catch (IOException ioe) {
-            }
+            //if (bufferOutPhone != null) {
+            //    ByteBuffer byteBuffer = ByteBuffer.allocate(Constants.PACKET_SIZE);
+            //    byteBuffer.putLong(actualTimeStamp);
+            //    for (int i = 0; i < 3; i++) {
+            //        byteBuffer.putShort((short) (100 * sensorEvent.values[i]));
+            //    }
+            //    try {
+            //        bufferOutPhone.write(byteBuffer.array());
+            //    } catch (IOException ioe) {
+            //    }
+            //}
         }
 
     }

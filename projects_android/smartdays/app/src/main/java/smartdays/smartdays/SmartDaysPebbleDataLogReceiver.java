@@ -35,7 +35,7 @@ public class SmartDaysPebbleDataLogReceiver extends PebbleKit.PebbleDataLogRecei
     }
 
     public void setOffset(long o) {
-        offsetFromUTC = o;
+        offsetFromUTC = (o/2) + (offsetFromUTC/2);
     }
 
     @Override
@@ -47,9 +47,10 @@ public class SmartDaysPebbleDataLogReceiver extends PebbleKit.PebbleDataLogRecei
                 Log.d("SmartDAYS", "Packets received: " + String.valueOf(packetCounter + 1) + " : " + String.valueOf(timestampData));
 
                 ByteBuffer temp = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).putLong(0, timestampData);
-                bufferOutPebble.write(temp.array());
+                bufferOutPebble.write(temp.array());                                                                                        // write Pebble signals (timestamp + data)
+                bufferOutPhoneSynced.write(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(timestampData).array());              // write Pebble timestamp
                 for (int i = 0; i < Constants.PEBBLE_BUFFER_SIZE; i++) {
-                    bufferOutPhoneSynced.write(phoneDataBuffer.getMatchingData(timestampData + (i * Constants.PEBBLE_SAMPLING_PERIOD)));
+                    bufferOutPhoneSynced.write(phoneDataBuffer.getMatchingData(timestampData + (i * Constants.PEBBLE_SAMPLING_PERIOD_MS))); // write Phone data
                 }
                 packetCounter++;
             } catch (IOException ioe) {
