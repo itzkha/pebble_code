@@ -12,6 +12,22 @@
     "dummy": 0
   },
   "resources": {
-    "media": []
+    "media": [    
+      {
+        "type": "png",
+        "name": "SMILE",
+        "file": "smile-32x32.png"
+      },
+      {
+        "type": "png",
+        "name": "SAD",
+        "file": "sad-32x32.png"
+      },
+      {
+        "type": "png",
+        "name": "NEUTRAL",
+        "file": "neutral-32x32.png"
+      }
+    ]
   }
 }

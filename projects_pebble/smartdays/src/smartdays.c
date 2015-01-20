@@ -14,7 +14,8 @@
 #define STOP_COMMAND 12
 #define TIMESTAMP_COMMAND 17
 #define SYNC_MENU_ITEM_COMMAND 7
-#define LABEL_COMMAND 21
+#define ACTIVITY_LABEL_COMMAND 21
+#define MOOD_LABEL_COMMAND 28
 
 #define MAX_MENU_ITEMS 10
 #define MAX_MENU_ITEM_LENGTH 15
@@ -24,16 +25,27 @@
 
 #define FROM_WATCH_APP_KEY 98
 
+#define MAX_TIME_WITHOUT_USER 15
+
+static uint8_t s_ticks = 0;
 
 static Window *s_main_window;
 static TextLayer *s_title_layer;
 static TextLayer *s_progress_layer;
 static TextLayer *s_status_layer;
 static char* s_progress[4] = {"|", "/", "--", "\\"};
-
-static char* menu_items[MAX_MENU_ITEMS];
-static uint8_t menu_items_counter = 0;
 static MenuLayer *s_menu_layer;
+
+static Window *s_activity_window;
+static MenuLayer *s_menu_activity_layer;
+static char* menu_activity_items[MAX_MENU_ITEMS];
+static uint8_t menu_items_counter = 0;
+static bool already_populated = false;
+
+static Window *s_mood_window;
+static MenuLayer *s_menu_mood_layer;
+static char* menu_mood_items[3] = {"Positive", "Don't know", "Negative"};
+static GBitmap *mood_icons[3];
 
 static const uint32_t const segments[] = { 50, 200, 50 };
 VibePattern pat = {
@@ -48,7 +60,7 @@ static int current_command;
 
 
 void send_command(int command);
-void send_label(char* label);
+void send_label(char* label, int command);
 
 
 //------------------------------------------------------------------------------------------------- Communication with the background worker
@@ -61,7 +73,7 @@ static void worker_message_handler(uint16_t type, AppWorkerMessage *data) {
     switch (data->data1) {
       case DATA_LOGGING_SUCCESS:
         APP_LOG(APP_LOG_LEVEL_INFO, "Log OK");
-        //text_layer_set_text(s_status_layer, "Log OK");
+        text_layer_set_text(s_status_layer, "Log OK");
         break;
       case DATA_LOGGING_BUSY:
         APP_LOG(APP_LOG_LEVEL_INFO, "Someone else is writing to this log!");
@@ -132,11 +144,13 @@ static void stop_worker() {
 
 //------------------------------------------------------------------------------------------------- Menu functions
 static void append_to_menu(char* item) {
-  strncpy(menu_items[menu_items_counter % MAX_MENU_ITEMS], item, MAX_MENU_ITEM_LENGTH);
+  strncpy(menu_activity_items[menu_items_counter % MAX_MENU_ITEMS], item, MAX_MENU_ITEM_LENGTH);
   menu_items_counter++;
-  menu_layer_reload_data(s_menu_layer);
+  menu_layer_reload_data(s_menu_activity_layer);
+  already_populated = true;
 }
 
+//-------------------------------------------------------------------------------------------------
 // A callback is used to specify the amount of sections of menu items
 // With this, you can dynamically add and remove sections
 static uint16_t menu_get_num_sections_callback(MenuLayer *menu_layer, void *data) {
@@ -146,32 +160,163 @@ static uint16_t menu_get_num_sections_callback(MenuLayer *menu_layer, void *data
 // Each section has a number of items;  we use a callback to specify this
 // You can also dynamically add and remove items using this
 static uint16_t menu_get_num_rows_callback(MenuLayer *menu_layer, uint16_t section_index, void *data) {
-  return menu_items_counter < MAX_MENU_ITEMS ? menu_items_counter : MAX_MENU_ITEMS;
+  return 2;
 }
 
 // A callback is used to specify the height of the section header
 static int16_t menu_get_cell_height_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *callback_context) {
   // This is a define provided in pebble.h that you may use for the default height
-  return 30;
-}
-
-// Here we draw what each header is
-static void menu_draw_header_callback(GContext* ctx, const Layer *cell_layer, uint16_t section_index, void *data) {
-  menu_cell_basic_header_draw(ctx, cell_layer, "Activities");
+  return 56;
 }
 
 // This is the menu item draw callback where you specify what each item should look like
 static void menu_draw_row_callback(GContext* ctx, const Layer *cell_layer, MenuIndex *cell_index, void *data) {
   // Use the row to specify which item we'll draw
-  menu_cell_title_draw(ctx, cell_layer, menu_items[cell_index->row]);
+  switch (cell_index->row) {
+    case 0:
+      menu_cell_basic_draw(ctx, cell_layer, "Activities", "What are you doing?", NULL);
+      break;
+    case 1:
+      menu_cell_basic_draw(ctx, cell_layer, "Mood", "How do you feel?", NULL);
+      break;
+  }
+}
+
+void menu_selection_changed_callback(MenuLayer *menu_layer, MenuIndex new_index, MenuIndex old_index, void *data) {
+  s_ticks = 0;
 }
 
 // Here we capture when a user selects a menu item
 void menu_select_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *data) {
   // Use the row to specify which item will receive the select action
-  text_layer_set_text(s_status_layer, "Thank you!" );
-  send_label(menu_items[cell_index->row]);
+  s_ticks = 0;
+
+  switch (cell_index->row) {
+    case 0:
+      window_stack_push(s_activity_window, true);
+      if (!already_populated) {
+        send_command(SYNC_MENU_ITEM_COMMAND);
+      }
+      // Populate menu
+      /*
+      switch (launch_reason()) {
+        case APP_LAUNCH_USER:
+        case APP_LAUNCH_QUICK_LAUNCH:
+          send_command(SYNC_MENU_ITEM_COMMAND);
+          break;
+        case APP_LAUNCH_SYSTEM:
+        case APP_LAUNCH_PHONE:
+        case APP_LAUNCH_WAKEUP:
+        case APP_LAUNCH_WORKER:
+          break;
+      }
+      */
+      break;
+    case 1:
+      window_stack_push(s_mood_window, true);
+      break;
+  }
 }
+//-------------------------------------------------------------------------------------------------
+// A callback is used to specify the amount of sections of menu items
+// With this, you can dynamically add and remove sections
+static uint16_t menu_activity_get_num_sections_callback(MenuLayer *menu_layer, void *data) {
+  return 1;
+}
+
+// Each section has a number of items;  we use a callback to specify this
+// You can also dynamically add and remove items using this
+static uint16_t menu_activity_get_num_rows_callback(MenuLayer *menu_layer, uint16_t section_index, void *data) {
+  return menu_items_counter < MAX_MENU_ITEMS ? menu_items_counter : MAX_MENU_ITEMS;
+}
+
+// A callback is used to specify the height of the section header
+static int16_t menu_activity_get_cell_height_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *callback_context) {
+  // This is a define provided in pebble.h that you may use for the default height
+  return 30;
+}
+
+// A callback is used to specify the height of the section header
+static int16_t menu_activity_get_header_height_callback(MenuLayer *menu_layer, uint16_t section_index, void *data) {
+  // This is a define provided in pebble.h that you may use for the default height
+  return MENU_CELL_BASIC_HEADER_HEIGHT;
+}
+
+// Here we draw what each header is
+static void menu_activity_draw_header_callback(GContext* ctx, const Layer *cell_layer, uint16_t section_index, void *data) {
+  menu_cell_basic_header_draw(ctx, cell_layer, "What are you doing?");
+}
+
+// This is the menu item draw callback where you specify what each item should look like
+static void menu_activity_draw_row_callback(GContext* ctx, const Layer *cell_layer, MenuIndex *cell_index, void *data) {
+  // Use the row to specify which item we'll draw
+  menu_cell_title_draw(ctx, cell_layer, menu_activity_items[cell_index->row]);
+}
+
+void menu_activity_selection_changed_callback(MenuLayer *menu_layer, MenuIndex new_index, MenuIndex old_index, void *data) {
+  s_ticks = 0;
+  menu_layer_set_selected_index(s_menu_activity_layer, new_index, MenuRowAlignCenter, true);
+}
+
+// Here we capture when a user selects a menu item
+void menu_activity_select_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *data) {
+  // Use the row to specify which item will receive the select action
+  s_ticks = 0;
+
+  text_layer_set_text(s_status_layer, "Thank you!" );
+  send_label(menu_activity_items[cell_index->row], ACTIVITY_LABEL_COMMAND);
+  window_stack_pop(true);
+}
+//-------------------------------------------------------------------------------------------------
+// A callback is used to specify the amount of sections of menu items
+// With this, you can dynamically add and remove sections
+static uint16_t menu_mood_get_num_sections_callback(MenuLayer *menu_layer, void *data) {
+  return 1;
+}
+
+// Each section has a number of items;  we use a callback to specify this
+// You can also dynamically add and remove items using this
+static uint16_t menu_mood_get_num_rows_callback(MenuLayer *menu_layer, uint16_t section_index, void *data) {
+  return 3;
+}
+
+// A callback is used to specify the height of the section header
+static int16_t menu_mood_get_cell_height_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *callback_context) {
+  // This is a define provided in pebble.h that you may use for the default height
+  return 45;
+}
+
+// A callback is used to specify the height of the section header
+static int16_t menu_mood_get_header_height_callback(MenuLayer *menu_layer, uint16_t section_index, void *data) {
+  // This is a define provided in pebble.h that you may use for the default height
+  return MENU_CELL_BASIC_HEADER_HEIGHT;
+}
+
+// Here we draw what each header is
+static void menu_mood_draw_header_callback(GContext* ctx, const Layer *cell_layer, uint16_t section_index, void *data) {
+  menu_cell_basic_header_draw(ctx, cell_layer, "How do you feel?");
+}
+
+void menu_mood_selection_changed_callback(MenuLayer *menu_layer, MenuIndex new_index, MenuIndex old_index, void *data) {
+  s_ticks = 0;
+}
+
+// This is the menu item draw callback where you specify what each item should look like
+static void menu_mood_draw_row_callback(GContext* ctx, const Layer *cell_layer, MenuIndex *cell_index, void *data) {
+  // Use the row to specify which item we'll draw
+  menu_cell_basic_draw(ctx, cell_layer, menu_mood_items[cell_index->row], NULL, mood_icons[cell_index->row]);
+}
+
+// Here we capture when a user selects a menu item
+void menu_mood_select_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *data) {
+  // Use the row to specify which item will receive the select action
+  s_ticks = 0;
+
+  text_layer_set_text(s_status_layer, "Thank you!" );
+  send_label(menu_mood_items[cell_index->row], MOOD_LABEL_COMMAND);
+  window_stack_pop(true);
+}
+
 
 //------------------------------------------------------------------------------------------------- Buttons configuration
 
@@ -187,21 +332,17 @@ void send_command(int command) {
 
   current_command = command;
   app_message_outbox_begin(&p_iter);
-  dict_write_int8(p_iter, COMMAND_KEY, command);
+  dict_write_int8(p_iter, COMMAND_KEY, current_command);
   dict_write_data(p_iter, TIMESTAMP_KEY, (uint8_t*)&timestamp, sizeof(timestamp));
   app_message_outbox_send();
 }
 
-void send_label(char* label) {
-  current_command = LABEL_COMMAND;
+void send_label(char* label, int command) {
+  current_command = command;
   app_message_outbox_begin(&p_iter);
   dict_write_int8(p_iter, COMMAND_KEY, current_command);
   dict_write_cstring(p_iter, LABEL_KEY, label);
   app_message_outbox_send();
-}
-
-void delayed_stop(void *data) {
-  window_stack_pop(true);
 }
 
 static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
@@ -210,6 +351,8 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   Tuple *t = dict_read_first(iterator);
   int command;
   char* text;
+
+  s_ticks = 0;
 
   while (t != NULL) {
     switch (t->key) {
@@ -227,11 +370,28 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
             text_layer_set_text(s_status_layer, "Synchronizing..." );
             send_command(TIMESTAMP_COMMAND);
             break;
-          case LABEL_COMMAND:
+          case ACTIVITY_LABEL_COMMAND:
             vibes_enqueue_custom_pattern(pat);
             text_layer_set_text(s_status_layer, "What are you doing?" );
-            send_command(SYNC_MENU_ITEM_COMMAND);
-            app_timer_register(20000, delayed_stop, NULL);
+            if (window_stack_get_top_window() == s_mood_window) {
+              window_stack_pop(true);
+            }
+            if (window_stack_get_top_window() != s_activity_window) {
+              window_stack_push(s_activity_window, true);
+            }
+            if (!already_populated) {
+              send_command(SYNC_MENU_ITEM_COMMAND);
+            }
+            break;
+          case MOOD_LABEL_COMMAND:
+            vibes_enqueue_custom_pattern(pat);
+            text_layer_set_text(s_status_layer, "How do you feel?" );
+            if (window_stack_get_top_window() == s_activity_window) {
+              window_stack_pop(true);
+            }
+            if (window_stack_get_top_window() != s_mood_window) {
+              window_stack_push(s_mood_window, true);
+            }
             break;
           case SYNC_MENU_ITEM_COMMAND:
             // do something during the next iteration
@@ -268,7 +428,7 @@ static void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResul
     case SYNC_MENU_ITEM_COMMAND:
       APP_LOG(APP_LOG_LEVEL_INFO, "Sync command sent failed");
       break;
-    case LABEL_COMMAND:
+    case ACTIVITY_LABEL_COMMAND:
       APP_LOG(APP_LOG_LEVEL_INFO, "Label command sent failed");
       break;
   }
@@ -289,12 +449,22 @@ static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
     case SYNC_MENU_ITEM_COMMAND:
       APP_LOG(APP_LOG_LEVEL_INFO, "Sync command sent");
       break;
-    case LABEL_COMMAND:
+    case ACTIVITY_LABEL_COMMAND:
       APP_LOG(APP_LOG_LEVEL_INFO, "Label command sent");
       break;
   }
 }
 
+//------------------------------------------------------------------------------------------------- Tick handler for stopping automatically
+static void tick_handler(struct tm *tick_timer, TimeUnits units_changed) {
+  // Update value
+  s_ticks++;
+
+  if (s_ticks > MAX_TIME_WITHOUT_USER) {
+    window_stack_pop_all(true);
+    s_ticks = 0;
+  }
+}
 //------------------------------------------------------------------------------------------------- Mandatory structure - init - deinit
 static void main_window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
@@ -327,25 +497,13 @@ static void main_window_load(Window *window) {
     .get_num_sections = menu_get_num_sections_callback,
     .get_num_rows = menu_get_num_rows_callback,
     .get_cell_height = menu_get_cell_height_callback,
-    .draw_header = menu_draw_header_callback,
     .draw_row = menu_draw_row_callback,
+    .selection_changed = menu_selection_changed_callback,
     .select_click = menu_select_callback
   });
   menu_layer_set_click_config_onto_window(s_menu_layer, window);
   layer_add_child(window_layer, menu_layer_get_layer(s_menu_layer));
   
-  // Populate menu
-  switch (launch_reason()) {
-    case APP_LAUNCH_USER:
-    case APP_LAUNCH_QUICK_LAUNCH:
-      send_command(SYNC_MENU_ITEM_COMMAND);
-      break;
-    case APP_LAUNCH_SYSTEM:
-    case APP_LAUNCH_PHONE:
-    case APP_LAUNCH_WAKEUP:
-    case APP_LAUNCH_WORKER:
-      break;
-  }
 }
 
 static void main_window_unload(Window *window) {
@@ -358,10 +516,69 @@ static void main_window_unload(Window *window) {
   text_layer_destroy(s_status_layer);
 }
 
+static void activity_window_load(Window *window) {
+  Layer *window_layer = window_get_root_layer(window);
+  GRect window_bounds = layer_get_bounds(window_layer);
+
+  // Create MenuLayer
+  s_menu_activity_layer = menu_layer_create(GRect(0, 0, window_bounds.size.w, window_bounds.size.h));
+  menu_layer_set_callbacks(s_menu_activity_layer, NULL, (MenuLayerCallbacks){
+    .get_num_sections = menu_activity_get_num_sections_callback,
+    .get_num_rows = menu_activity_get_num_rows_callback,
+    .get_cell_height = menu_activity_get_cell_height_callback,
+    .get_header_height = menu_activity_get_header_height_callback,
+    .draw_header = menu_activity_draw_header_callback,
+    .draw_row = menu_activity_draw_row_callback,
+    .selection_changed = menu_activity_selection_changed_callback,
+    .select_click = menu_activity_select_callback
+  });
+  menu_layer_set_click_config_onto_window(s_menu_activity_layer, window);
+  layer_add_child(window_layer, menu_layer_get_layer(s_menu_activity_layer));
+  
+}
+
+static void activity_window_unload(Window *window) {
+  menu_layer_destroy(s_menu_activity_layer);
+}
+
+static void mood_window_load(Window *window) {
+  Layer *window_layer = window_get_root_layer(window);
+  GRect window_bounds = layer_get_bounds(window_layer);
+  
+  mood_icons[0] = gbitmap_create_with_resource(RESOURCE_ID_SMILE);
+  mood_icons[1] = gbitmap_create_with_resource(RESOURCE_ID_NEUTRAL);
+  mood_icons[2] = gbitmap_create_with_resource(RESOURCE_ID_SAD);
+
+  // Create MenuLayer
+  s_menu_mood_layer = menu_layer_create(GRect(0, 0, window_bounds.size.w, window_bounds.size.h));
+  menu_layer_set_callbacks(s_menu_mood_layer, NULL, (MenuLayerCallbacks){
+    .get_num_sections = menu_mood_get_num_sections_callback,
+    .get_num_rows = menu_mood_get_num_rows_callback,
+    .get_cell_height = menu_mood_get_cell_height_callback,
+    .get_header_height = menu_mood_get_header_height_callback,
+    .draw_header = menu_mood_draw_header_callback,
+    .draw_row = menu_mood_draw_row_callback,
+    //.get_separator_height = menu_mood_get_separator_height,
+    .selection_changed = menu_mood_selection_changed_callback,
+    .select_click = menu_mood_select_callback
+  });
+  menu_layer_set_click_config_onto_window(s_menu_mood_layer, window);
+  layer_add_child(window_layer, menu_layer_get_layer(s_menu_mood_layer));
+  
+}
+
+static void mood_window_unload(Window *window) {
+  gbitmap_destroy(mood_icons[0]);
+  gbitmap_destroy(mood_icons[1]);
+  gbitmap_destroy(mood_icons[2]);
+
+  menu_layer_destroy(s_menu_mood_layer);
+}
+
 static void init() {
   uint8_t i;
   for (i = 0; i < MAX_MENU_ITEMS; i++) {
-    menu_items[i] = malloc(MAX_MENU_ITEM_LENGTH);
+    menu_activity_items[i] = malloc(MAX_MENU_ITEM_LENGTH);
   }
 
   // Register callbacks
@@ -381,24 +598,46 @@ static void init() {
   });
   window_stack_push(s_main_window, true);
   
+  // Create activity labels window
+  s_activity_window = window_create();
+  window_set_window_handlers(s_activity_window, (WindowHandlers) {
+    .load = activity_window_load,
+    .unload = activity_window_unload
+  });
+
+  // Create mood labels window
+  s_mood_window = window_create();
+  window_set_window_handlers(s_mood_window, (WindowHandlers) {
+    .load = mood_window_load,
+    .unload = mood_window_unload
+  });
+
   // Subscribe to Worker messages
   app_worker_message_subscribe(worker_message_handler);
+
+  // Timer for auto-stop
+  tick_timer_service_subscribe(SECOND_UNIT, tick_handler);
 }
 
 static void deinit() {
   APP_LOG(APP_LOG_LEVEL_INFO, "Quitting application!");
+  tick_timer_service_unsubscribe();
   // Deregister callbacks
   app_message_deregister_callbacks();
   // No more worker updates
   app_worker_message_unsubscribe();
   // Destroy main Window
   window_destroy(s_main_window);
+  // Destroy activity Window
+  window_destroy(s_activity_window);
+  // Destroy mood Window
+  window_destroy(s_mood_window);
 
   persist_write_bool(FROM_WATCH_APP_KEY, false);
   
   uint8_t i;
   for (i = 0; i < MAX_MENU_ITEMS; i++) {
-    free(menu_items[i]);
+    free(menu_activity_items[i]);
   }
 }
 

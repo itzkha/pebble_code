@@ -33,6 +33,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Random;
 import java.util.TimeZone;
 
 /**
@@ -54,7 +55,8 @@ public class LoggingService extends Service {
     private BufferedOutputStream bufferOutPhoneSynced = null;
     //private BufferedOutputStream bufferOutPhone = null;
     //private BufferedOutputStream bufferOutSync = null;
-    private BufferedOutputStream bufferOutLabel = null;
+    private BufferedOutputStream bufferOutLabelActivity = null;
+    private BufferedOutputStream bufferOutLabelMood = null;
     private PhoneDataBuffer phoneDataBuffer;
 
     private SmartDaysPebbleDataLogReceiver dataloggingReceiver;
@@ -73,7 +75,10 @@ public class LoggingService extends Service {
     private int timestampFailCounter = 0;
     private int timestampCounter = 0;
     private int syncMenuFailCounter = 0;
-    private int labelFailCounter = 0;
+    private int activityLabelFailCounter = 0;
+    private int moodLabelFailCounter = 0;
+
+    private Random random;
 
 
     public static boolean isRunning() {
@@ -90,6 +95,7 @@ public class LoggingService extends Service {
         if (instance == null) {
             instance = this;
         }
+        random = new Random();
         lastPhoneTimestamp = System.currentTimeMillis();
         notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -111,6 +117,7 @@ public class LoggingService extends Service {
             public void receiveData(final Context context, final int transactionId, final PebbleDictionary data) {
                 int command = data.getInteger(Constants.COMMAND_KEY).intValue();
                 Log.d(Constants.TAG, "Receiving command: " + String.valueOf(command));
+                String label;
                 switch (command) {
                     case Constants.TIMESTAMP_COMMAND:
                         Log.d(Constants.TAG, "TIMESTAMP received");
@@ -135,11 +142,16 @@ public class LoggingService extends Service {
                         Log.d(Constants.TAG, "Receiving request for label items");
                         askActivity(Constants.SYNC_MENU_ITEM_COMMAND);
                         break;
-                    case Constants.LABEL_COMMAND:
-                        String label = data.getString(Constants.LABEL_KEY);
-                        Log.d(Constants.TAG, "Received label: " + label);
-                        logLabel(label);
+                    case Constants.ACTIVITY_LABEL_COMMAND:
+                        label = data.getString(Constants.LABEL_KEY);
+                        Log.d(Constants.TAG, "Received activity label: " + label);
+                        logLabel(label, command);
                         askActivity(label);
+                        break;
+                    case Constants.MOOD_LABEL_COMMAND:
+                        label = data.getString(Constants.LABEL_KEY);
+                        Log.d(Constants.TAG, "Received mood label: " + label);
+                        logLabel(label, command);
                         break;
                 }
                 PebbleKit.sendAckToPebble(getApplicationContext(), transactionId);
@@ -167,8 +179,11 @@ public class LoggingService extends Service {
                         syncMenuFailCounter = 0;
                         askActivity(Constants.SYNC_MENU_ITEM_COMMAND);
                         break;
-                    case Constants.LABEL_COMMAND:
-                        labelFailCounter = 0;
+                    case Constants.ACTIVITY_LABEL_COMMAND:
+                        activityLabelFailCounter = 0;
+                        break;
+                    case Constants.MOOD_LABEL_COMMAND:
+                        moodLabelFailCounter = 0;
                         break;
                 }
             }
@@ -185,7 +200,8 @@ public class LoggingService extends Service {
                         startFailCounter++;
                         if (startFailCounter < Constants.MAX_FAILS) {
                             sendCommand(Constants.START_COMMAND);
-                        } else {
+                        }
+                        else {
                             Toast.makeText(instance, R.string.pebble_not_responding, Toast.LENGTH_SHORT).show();
                             stop();
                         }
@@ -194,7 +210,8 @@ public class LoggingService extends Service {
                         stopFailCounter++;
                         if (stopFailCounter < Constants.MAX_FAILS) {
                             sendCommand(Constants.STOP_COMMAND);
-                        } else {
+                        }
+                        else {
                             // Tell the user we stopped
                             Toast.makeText(instance, R.string.pebble_not_responding, Toast.LENGTH_SHORT).show();
                             stop();
@@ -204,7 +221,8 @@ public class LoggingService extends Service {
                         timestampFailCounter++;
                         if (timestampFailCounter < Constants.MAX_FAILS) {
                             sendCommand(Constants.TIMESTAMP_COMMAND);
-                        } else {
+                        }
+                        else {
                             // Tell the user the Pebble is not responding
                             Toast.makeText(instance, R.string.pebble_not_responding, Toast.LENGTH_SHORT).show();
                         }
@@ -213,16 +231,28 @@ public class LoggingService extends Service {
                         syncMenuFailCounter++;
                         if (syncMenuFailCounter < Constants.MAX_FAILS) {
                             askActivity(Constants.SYNC_MENU_ITEM_COMMAND);
-                        } else {
+                        }
+                        else {
                             // Tell the user the Pebble is not responding
                             Toast.makeText(instance, R.string.pebble_not_responding, Toast.LENGTH_SHORT).show();
                         }
                         break;
-                    case Constants.LABEL_COMMAND:
-                        labelFailCounter++;
-                        if (labelFailCounter < Constants.MAX_FAILS) {
-                            sendCommand(Constants.LABEL_COMMAND);
-                        } else {
+                    case Constants.ACTIVITY_LABEL_COMMAND:
+                        activityLabelFailCounter++;
+                        if (activityLabelFailCounter < Constants.MAX_FAILS) {
+                            sendCommand(Constants.ACTIVITY_LABEL_COMMAND);
+                        }
+                        else {
+                            // Tell the user the Pebble is not responding
+                            Toast.makeText(instance, R.string.pebble_not_responding, Toast.LENGTH_SHORT).show();
+                        }
+                        break;
+                    case Constants.MOOD_LABEL_COMMAND:
+                        moodLabelFailCounter++;
+                        if (moodLabelFailCounter < Constants.MAX_FAILS) {
+                            sendCommand(Constants.MOOD_LABEL_COMMAND);
+                        }
+                        else {
                             // Tell the user the Pebble is not responding
                             Toast.makeText(instance, R.string.pebble_not_responding, Toast.LENGTH_SHORT).show();
                         }
@@ -241,11 +271,17 @@ public class LoggingService extends Service {
                 PebbleKit.startAppOnPebble(getApplicationContext(), Constants.WATCHAPP_UUID);
 
                 if (timestampCounter <= Constants.NUMBER_OF_SYNCS) {
-                    sendCommand(Constants.TIMESTAMP_COMMAND);                               // ask for timestamp
+                    sendCommand(Constants.TIMESTAMP_COMMAND);                                       // ask for timestamp
                     synchronizationLabellingHandler.postDelayed(this, Constants.SYNCHRONIZATION_LABELLING_SHORT_PERIOD);
-                } else {
+                }
+                else {
                     timestampCounter = 0;
-                    sendCommand(Constants.LABEL_COMMAND);                                   // ask for labels
+                    if (random.nextFloat() > Constants.MOOD_ACTIVITY_RATIO) {
+                        sendCommand(Constants.ACTIVITY_LABEL_COMMAND);                              // ask for labels (activity)
+                    }
+                    else {
+                        sendCommand(Constants.MOOD_LABEL_COMMAND);                                  // ask for labels (mood)
+                    }
                     synchronizationLabellingHandler.postDelayed(this, Constants.SYNCHRONIZATION_LABELLING_LONG_PERIOD);
                 }
             }
@@ -266,9 +302,12 @@ public class LoggingService extends Service {
             String deviceId = Settings.Secure.getString(this.getContentResolver(), Settings.Secure.ANDROID_ID);
             SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
 
-            bufferOutLabel = new BufferedOutputStream(new FileOutputStream(new File(appDir, "labels_" + deviceId + "_" + sdf.format(new Date()))));
-            bufferOutLabel.write(Constants.labelsFileHeader.getBytes());
-            logLabel("No activity");
+            bufferOutLabelActivity = new BufferedOutputStream(new FileOutputStream(new File(appDir, "activity_" + deviceId + "_" + sdf.format(new Date()))));
+            bufferOutLabelActivity.write(Constants.labelsFileHeader.getBytes());
+            logLabel("No activity", Constants.ACTIVITY_LABEL_COMMAND);
+            bufferOutLabelMood = new BufferedOutputStream(new FileOutputStream(new File(appDir, "mood_" + deviceId + "_" + sdf.format(new Date()))));
+            bufferOutLabelMood.write(Constants.labelsFileHeader.getBytes());
+            logLabel("Don't know", Constants.MOOD_LABEL_COMMAND);
             bufferOutPebble = new BufferedOutputStream(new FileOutputStream(new File(appDir, "pebbleAccel_" + deviceId + "_" + sdf.format(new Date()))));
             bufferOutPhoneSynced = new BufferedOutputStream(new FileOutputStream(new File(appDir, "phoneAccel_" + deviceId + "_" + sdf.format(new Date()))));
             phoneDataBuffer = new PhoneDataBuffer(Constants.BUFFER_SIZE);
@@ -286,8 +325,8 @@ public class LoggingService extends Service {
                 Log.d(Constants.TAG, String.format("Service received message: msg=%s", msg));
 
                 switch (msg.what) {
-                    case Constants.LABEL_COMMAND:
-                        logLabel(msg.obj.toString());
+                    case Constants.ACTIVITY_LABEL_COMMAND:
+                        logLabel(msg.obj.toString(), Constants.ACTIVITY_LABEL_COMMAND);
                         break;
                     case Constants.SYNC_MENU_ITEM_COMMAND:
                         sendCommand(msg.obj.toString());
@@ -372,14 +411,25 @@ public class LoggingService extends Service {
         }
 
         try {
-            bufferOutLabel.close();
-            Log.d(Constants.TAG, "File testCapture closed...");
+            bufferOutLabelActivity.close();
+            Log.d(Constants.TAG, "File activity closed...");
         }
         catch (IOException ioe) {
-            Log.d(Constants.TAG, "Error closing bufferOutLabel...");
+            Log.d(Constants.TAG, "Error closing bufferOutLabelActivity...");
         }
         catch (NullPointerException iae) {
-            Log.d(Constants.TAG, "Closing bufferOutLabel... null pointer");
+            Log.d(Constants.TAG, "Closing bufferOutLabelActivity... null pointer");
+        }
+
+        try {
+            bufferOutLabelMood.close();
+            Log.d(Constants.TAG, "File mood closed...");
+        }
+        catch (IOException ioe) {
+            Log.d(Constants.TAG, "Error closing bufferOutLabelMood...");
+        }
+        catch (NullPointerException iae) {
+            Log.d(Constants.TAG, "Closing bufferOutLabelMood... null pointer");
         }
 
         //try {
@@ -482,13 +532,13 @@ public class LoggingService extends Service {
     private void askActivity(String label) {
         if(MainActivity.serviceMessagesHandler != null) {
             Message msg = Message.obtain();
-            msg.what = Constants.LABEL_COMMAND;
+            msg.what = Constants.ACTIVITY_LABEL_COMMAND;
             msg.obj = label;
             MainActivity.serviceMessagesHandler.sendMessage(msg);
         }
     }
 
-    private void logLabel(String label) {
+    private void logLabel(String label, int command) {
         try {
             String line = label.concat("," + String.valueOf(System.currentTimeMillis()));
             Location location = fusedLocationService.getLocation();
@@ -503,8 +553,17 @@ public class LoggingService extends Service {
             else {
                 line = line.concat(",NA,NA,NA,NA,NA\n");
             }
-            bufferOutLabel.write(line.getBytes());
-            bufferOutLabel.flush();
+            switch (command) {
+                case Constants.ACTIVITY_LABEL_COMMAND:
+                    bufferOutLabelActivity.write(line.getBytes());
+                    bufferOutLabelActivity.flush();
+                    break;
+                case Constants.MOOD_LABEL_COMMAND:
+                    bufferOutLabelMood.write(line.getBytes());
+                    bufferOutLabelMood.flush();
+                    break;
+            }
+
         }
         catch (IOException ioe) {
         }

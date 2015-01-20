@@ -138,6 +138,7 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
         activities = new ArrayList<String>(20);
         activities.add("Breakfast");
         activities.add("Coffee");
+        activities.add("Cook");
         activities.add("Dinner");
         activities.add("Lunch");
         activities.add("No activity");
@@ -179,7 +180,7 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
                             menuItemInitIndex = 0;
                         }
                         break;
-                    case Constants.LABEL_COMMAND:
+                    case Constants.ACTIVITY_LABEL_COMMAND:
                         textViewCurrentActivity.setText(msg.obj.toString());
                         break;
                 }
@@ -263,7 +264,7 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
 
     @Override
     public void onDialogPositiveClick(String activity) {
-        if (askService(Constants.LABEL_COMMAND, activity)) {
+        if (askService(Constants.ACTIVITY_LABEL_COMMAND, activity)) {
             textViewCurrentActivity.setText(activity);
         }
 

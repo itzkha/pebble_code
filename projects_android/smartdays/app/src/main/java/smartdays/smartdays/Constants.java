@@ -29,7 +29,9 @@ public class Constants {
     public static final int STOP_COMMAND = 12;
     public static final int TIMESTAMP_COMMAND = 17;
     public static final int SYNC_MENU_ITEM_COMMAND = 7;
-    public static final int LABEL_COMMAND = 21;
+    public static final int ACTIVITY_LABEL_COMMAND = 21;
+    public static final int MOOD_LABEL_COMMAND = 28;
+    public static final float MOOD_ACTIVITY_RATIO = 0.1f;
 
     public static final int SERVICE_STOPPED = 43;
 
