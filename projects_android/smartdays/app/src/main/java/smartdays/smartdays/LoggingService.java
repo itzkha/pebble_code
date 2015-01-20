@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorManager;
+import android.location.Location;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
@@ -17,6 +18,10 @@ import android.provider.Settings;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.dropbox.client2.DropboxAPI;
+import com.dropbox.client2.android.AndroidAuthSession;
+import com.dropbox.client2.session.AppKeyPair;
+import com.dropbox.client2.session.Session;
 import com.getpebble.android.kit.PebbleKit;
 import com.getpebble.android.kit.util.PebbleDictionary;
 
@@ -42,7 +47,8 @@ public class LoggingService extends Service {
     private int NOTIFICATION = R.string.local_service_started;
     private SensorManager sensorManager;
     private Sensor accelerometer;
-    PhoneSensorEventListener phoneSensorEventListener;
+    private PhoneSensorEventListener phoneSensorEventListener;
+    private FusedLocationService fusedLocationService;
 
     private BufferedOutputStream bufferOutPebble = null;
     private BufferedOutputStream bufferOutPhoneSynced = null;
@@ -58,6 +64,7 @@ public class LoggingService extends Service {
     private PowerManager.WakeLock wakeLock;
     private Handler synchronizationLabellingHandler;
     private Runnable runnableSynchronizationLabelling;
+
 
     private long lastPhoneTimestamp = 0;
     private static boolean running = false;
@@ -79,7 +86,7 @@ public class LoggingService extends Service {
 
     @Override
     public void onCreate() {
-        Log.d("SmartDAYS", "Creating...");
+        Log.d(Constants.TAG, "Creating...");
         if (instance == null) {
             instance = this;
         }
@@ -89,7 +96,7 @@ public class LoggingService extends Service {
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
         PowerManager pm = (PowerManager) this.getSystemService(Context.POWER_SERVICE);
-        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "SmartDAYS");
+        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, Constants.TAG);
 
         // Display a notification about us starting.  We put an icon in the status bar.
         showNotification();
@@ -103,16 +110,16 @@ public class LoggingService extends Service {
             @Override
             public void receiveData(final Context context, final int transactionId, final PebbleDictionary data) {
                 int command = data.getInteger(Constants.COMMAND_KEY).intValue();
-                Log.d("SmartDAYS", "Receiving command: " + String.valueOf(command));
+                Log.d(Constants.TAG, "Receiving command: " + String.valueOf(command));
                 switch (command) {
                     case Constants.TIMESTAMP_COMMAND:
-                        Log.d("SmartDAYS", "TIMESTAMP received");
+                        Log.d(Constants.TAG, "TIMESTAMP received");
                         //DeltaT = ((Tpe1 + Tpe2) - (Tph1 + Tph2)) / 2      We use Tpe1 = Tpe2
                         currentTime = System.currentTimeMillis();
                         timestampPebble = ByteBuffer.wrap(data.getBytes(Constants.TIMESTAMP_KEY)).order(ByteOrder.LITTLE_ENDIAN).getLong();
                         offsetFromUTC = timestampPebble - ((currentTime + lastPhoneTimestamp) / 2);
-                        //Log.d("SmartDAYS", "timestampPEBBLE=" + String.valueOf(timestampPebble) + " currentTime=" + String.valueOf(currentTime) + " lastTime=" + String.valueOf(lastPhoneTimestamp) + " new offset=" + String.valueOf(offsetFromUTC));
-                        Log.d("SmartDAYS", "new offset=" + String.valueOf(offsetFromUTC));
+                        //Log.d(Constants.TAG, "timestampPEBBLE=" + String.valueOf(timestampPebble) + " currentTime=" + String.valueOf(currentTime) + " lastTime=" + String.valueOf(lastPhoneTimestamp) + " new offset=" + String.valueOf(offsetFromUTC));
+                        Log.d(Constants.TAG, "new offset=" + String.valueOf(offsetFromUTC));
                         dataloggingReceiver.setOffset(offsetFromUTC);
                         //if (bufferOutSync != null) {
                         //    try {
@@ -122,15 +129,15 @@ public class LoggingService extends Service {
                         //    }
                         //}
                         timestampCounter++;
-                        Log.d("SmartDAYS", "counter: " + String.valueOf(timestampCounter));
+                        Log.d(Constants.TAG, "counter: " + String.valueOf(timestampCounter));
                         break;
                     case Constants.SYNC_MENU_ITEM_COMMAND:
-                        Log.d("SmartDAYS", "Receiving request for label items");
+                        Log.d(Constants.TAG, "Receiving request for label items");
                         askActivity(Constants.SYNC_MENU_ITEM_COMMAND);
                         break;
                     case Constants.LABEL_COMMAND:
                         String label = data.getString(Constants.LABEL_KEY);
-                        Log.d("SmartDAYS", "Received label: " + label);
+                        Log.d(Constants.TAG, "Received label: " + label);
                         logLabel(label);
                         askActivity(label);
                         break;
@@ -143,7 +150,7 @@ public class LoggingService extends Service {
         pebbleAppMessageAckReceiver = new PebbleKit.PebbleAckReceiver(Constants.WATCHAPP_UUID) {
             @Override
             public void receiveAck(Context context, int transactionId) {
-                Log.i("SmartDAYS", "Received ack for transaction " + transactionId);
+                Log.i(Constants.TAG, "Received ack for transaction " + transactionId);
 
                 switch (transactionId) {
                     case Constants.START_COMMAND:
@@ -171,7 +178,7 @@ public class LoggingService extends Service {
         pebbleAppMessageNackReceiver = new PebbleKit.PebbleNackReceiver(Constants.WATCHAPP_UUID) {
             @Override
             public void receiveNack(Context context, int transactionId) {
-                Log.i("SmartDAYS", "Received nack for transaction " + transactionId);
+                Log.i(Constants.TAG, "Received nack for transaction " + transactionId);
 
                 switch (transactionId) {
                     case Constants.START_COMMAND:
@@ -246,6 +253,9 @@ public class LoggingService extends Service {
         synchronizationLabellingHandler.postDelayed(runnableSynchronizationLabelling, Constants.SYNCHRONIZATION_LABELLING_SHORT_PERIOD);         // Request first timestamp
         //------------------------------------------------------------------------------------------
 
+        fusedLocationService = new FusedLocationService(MainActivity.getInstance());
+
+        //------------------------------------------------------------------------------------------
         try {
             File appDir = new File(Environment.getExternalStorageDirectory() + "/smartdays");
             if (!appDir.exists()) {
@@ -257,22 +267,23 @@ public class LoggingService extends Service {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
 
             bufferOutLabel = new BufferedOutputStream(new FileOutputStream(new File(appDir, "labels_" + deviceId + "_" + sdf.format(new Date()))));
+            bufferOutLabel.write(Constants.labelsFileHeader.getBytes());
             logLabel("No activity");
             bufferOutPebble = new BufferedOutputStream(new FileOutputStream(new File(appDir, "pebbleAccel_" + deviceId + "_" + sdf.format(new Date()))));
             bufferOutPhoneSynced = new BufferedOutputStream(new FileOutputStream(new File(appDir, "phoneAccel_" + deviceId + "_" + sdf.format(new Date()))));
             phoneDataBuffer = new PhoneDataBuffer(Constants.BUFFER_SIZE);
 
-            Log.d("SmartDAYS", "Files created...");
+            Log.d(Constants.TAG, "Files created...");
 
         } catch (IOException ioe) {
-            Log.d("SmartDAYS", "Error creating file...");
+            Log.d(Constants.TAG, "Error creating file...");
         }
 
         //------------------------------------------------------------------------------------------
         serviceMessagesHandler = new Handler() {
             @Override
             public void handleMessage(Message msg) {
-                Log.d("SmartDAYS", String.format("Service received message: msg=%s", msg));
+                Log.d(Constants.TAG, String.format("Service received message: msg=%s", msg));
 
                 switch (msg.what) {
                     case Constants.LABEL_COMMAND:
@@ -301,6 +312,7 @@ public class LoggingService extends Service {
             startLoggingPebble();
             startLoggingPhone();
             running = true;
+
         }
 
         return Service.START_STICKY;
@@ -314,6 +326,15 @@ public class LoggingService extends Service {
         // Tell the user we stopped.
         Toast.makeText(this, R.string.local_service_stopped, Toast.LENGTH_SHORT).show();
 
+        running = false;
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
+
+    private void freeResources() {
         //------------------------------------------------------------------------------------------ Stop alarms
         synchronizationLabellingHandler.removeCallbacks(runnableSynchronizationLabelling);
         synchronizationLabellingHandler = null;
@@ -321,11 +342,11 @@ public class LoggingService extends Service {
         //------------------------------------------------------------------------------------------ Stop acquisition receivers
         try {
             unregisterReceiver(dataloggingReceiver);
-            Log.d("SmartDAYS", "Unregistering receiver...");
+            Log.d(Constants.TAG, "Unregistering receiver...");
         } catch (NullPointerException iae) {
-            Log.d("SmartDAYS", "Ending service... null pointer");
+            Log.d(Constants.TAG, "Ending service... null pointer");
         } catch (IllegalArgumentException iae) {
-            Log.d("SmartDAYS", "Unregistering receiver... already unregistered");
+            Log.d(Constants.TAG, "Unregistering receiver... already unregistered");
         }
 
         sensorManager.unregisterListener(phoneSensorEventListener);
@@ -334,49 +355,49 @@ public class LoggingService extends Service {
         //------------------------------------------------------------------------------------------ Close files
         try {
             bufferOutPebble.close();
-            Log.d("SmartDAYS", "bufferOutPebble closed...");
+            Log.d(Constants.TAG, "bufferOutPebble closed...");
         } catch (IOException ioe) {
-            Log.d("SmartDAYS", "Error closing bufferOutPebble...");
+            Log.d(Constants.TAG, "Error closing bufferOutPebble...");
         } catch (NullPointerException iae) {
-            Log.d("SmartDAYS", "Closing bufferOutPebble... null pointer");
+            Log.d(Constants.TAG, "Closing bufferOutPebble... null pointer");
         }
 
         try {
             bufferOutPhoneSynced.close();
-            Log.d("SmartDAYS", "bufferOutPhoneSynced closed...");
+            Log.d(Constants.TAG, "bufferOutPhoneSynced closed...");
         } catch (IOException ioe) {
-            Log.d("SmartDAYS", "Error closing bufferOutPhoneSynced...");
+            Log.d(Constants.TAG, "Error closing bufferOutPhoneSynced...");
         } catch (NullPointerException iae) {
-            Log.d("SmartDAYS", "Closing bufferOutPhoneSynced... null pointer");
+            Log.d(Constants.TAG, "Closing bufferOutPhoneSynced... null pointer");
         }
 
         try {
             bufferOutLabel.close();
-            Log.d("SmartDAYS", "File testCapture closed...");
+            Log.d(Constants.TAG, "File testCapture closed...");
         }
         catch (IOException ioe) {
-            Log.d("SmartDAYS", "Error closing bufferOutLabel...");
+            Log.d(Constants.TAG, "Error closing bufferOutLabel...");
         }
         catch (NullPointerException iae) {
-            Log.d("SmartDAYS", "Closing bufferOutLabel... null pointer");
+            Log.d(Constants.TAG, "Closing bufferOutLabel... null pointer");
         }
 
         //try {
         //    bufferOutPhone.close();
-        //    Log.d("SmartDAYS", "bufferOutPhone closed...");
+        //    Log.d(Constants.TAG, "bufferOutPhone closed...");
         //} catch (IOException ioe) {
-        //    Log.d("SmartDAYS", "Error closing bufferOutPhone...");
+        //    Log.d(Constants.TAG, "Error closing bufferOutPhone...");
         //} catch (NullPointerException iae) {
-        //    Log.d("SmartDAYS", "Closing bufferOutPhone... null pointer");
+        //    Log.d(Constants.TAG, "Closing bufferOutPhone... null pointer");
         //}
 
         //try {
         //    bufferOutSync.close();
-        //   Log.d("SmartDAYS", "bufferOutSync closed...");
+        //   Log.d(Constants.TAG, "bufferOutSync closed...");
         //} catch (IOException ioe) {
-        //    Log.d("SmartDAYS", "Error closing bufferOutSync...");
+        //    Log.d(Constants.TAG, "Error closing bufferOutSync...");
         //} catch (NullPointerException iae) {
-        //    Log.d("SmartDAYS", "Closing bufferOutSync... null pointer");
+        //    Log.d(Constants.TAG, "Closing bufferOutSync... null pointer");
         //}
 
         //------------------------------------------------------------------------------------------ Stop communication with the Pebble
@@ -385,12 +406,15 @@ public class LoggingService extends Service {
         unregisterReceiver(pebbleAppMessageNackReceiver);
 
         PebbleKit.closeAppOnPebble(getApplicationContext(), Constants.WATCHAPP_UUID);               // stop the Pebble application
-        running = false;
+
     }
 
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
+    private void stop() {
+        freeResources();
+        askActivity(Constants.SERVICE_STOPPED);
+
+        // Then stop
+        stopSelf();
     }
 
     /**
@@ -433,7 +457,7 @@ public class LoggingService extends Service {
     }
 
     private void sendCommand(int command) {
-        Log.d("SmartDAYS", "Sending command: " + String.valueOf(command));
+        Log.d(Constants.TAG, "Sending command: " + String.valueOf(command));
         PebbleDictionary data = new PebbleDictionary();
         data.addUint8(Constants.COMMAND_KEY, (byte) command);
         lastPhoneTimestamp = System.currentTimeMillis();
@@ -441,17 +465,10 @@ public class LoggingService extends Service {
     }
 
     private void sendCommand(String item) {
-        Log.d("SmartDAYS", "Sending command: " + String.valueOf(Constants.SYNC_MENU_ITEM_COMMAND) + " menuItem: " + item);
+        Log.d(Constants.TAG, "Sending command: " + String.valueOf(Constants.SYNC_MENU_ITEM_COMMAND) + " menuItem: " + item);
         PebbleDictionary data = new PebbleDictionary();
         data.addString(Constants.MENU_ITEM_KEY, item);
         PebbleKit.sendDataToPebbleWithTransactionId(getApplicationContext(), Constants.WATCHAPP_UUID, data, Constants.SYNC_MENU_ITEM_COMMAND);
-    }
-
-    private void stop() {
-        askActivity(Constants.SERVICE_STOPPED);
-
-        // Then stop
-        stopSelf();
     }
 
     private void askActivity(int command) {
@@ -473,7 +490,19 @@ public class LoggingService extends Service {
 
     private void logLabel(String label) {
         try {
-            String line = label.concat("," + String.valueOf(System.currentTimeMillis()) + "\n");
+            String line = label.concat("," + String.valueOf(System.currentTimeMillis()));
+            Location location = fusedLocationService.getLocation();
+            if (location != null) {
+                line = line.concat("," + location.getLatitude()
+                        + "," + location.getLongitude()
+                        + "," + location.getAltitude()
+                        + "," + location.getAccuracy()
+                        + "," + location.getProvider()
+                        + "\n");
+            }
+            else {
+                line = line.concat(",NA,NA,NA,NA,NA\n");
+            }
             bufferOutLabel.write(line.getBytes());
             bufferOutLabel.flush();
         }

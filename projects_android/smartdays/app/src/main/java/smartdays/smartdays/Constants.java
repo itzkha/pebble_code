@@ -7,6 +7,7 @@ import java.util.UUID;
  */
 public class Constants {
     public static final UUID WATCHAPP_UUID = UUID.fromString("f3cdf03e-a639-4196-88a0-51fe502ab3d4");
+    public static final String TAG = "SmartDAYS";
     public static final int DATA_LOG_TAG_ACCEL = 51;
     public static final int PEBBLE_BUFFER_SIZE = 25;                                                // 1 second
     public static final int PEBBLE_SAMPLING_PERIOD_MS = 40;                                         // 40 mS
@@ -31,5 +32,10 @@ public class Constants {
     public static final int LABEL_COMMAND = 21;
 
     public static final int SERVICE_STOPPED = 43;
+
+    public static final String labelsFileHeader = "label,timestamp,latitute,longitude,altitute,accuracy,provider\n";
+
+    public static final String DROPBOX_APP_KEY = "fuznchohlrpzq7s";
+    public static final String DROPBOX_APP_SECRET = "agrk7cc32i02i6i";
 
 }
