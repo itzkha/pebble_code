@@ -295,14 +295,14 @@ public class LoggingService extends Service {
             String deviceId = Settings.Secure.getString(this.getContentResolver(), Settings.Secure.ANDROID_ID);
             SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
 
-            bufferOutLabelActivity = new BufferedOutputStream(new FileOutputStream(new File(appDir, "activity_" + deviceId + "_" + sdf.format(new Date()))));
+            bufferOutLabelActivity = new BufferedOutputStream(new FileOutputStream(new File(appDir, "activity_" + deviceId + "_" + sdf.format(new Date()) + ".csv")));
             bufferOutLabelActivity.write(Constants.labelsFileHeader.getBytes());
             logLabel("No activity", Constants.ACTIVITY_LABEL_COMMAND);
-            bufferOutLabelMood = new BufferedOutputStream(new FileOutputStream(new File(appDir, "mood_" + deviceId + "_" + sdf.format(new Date()))));
+            bufferOutLabelMood = new BufferedOutputStream(new FileOutputStream(new File(appDir, "mood_" + deviceId + "_" + sdf.format(new Date()) + ".csv")));
             bufferOutLabelMood.write(Constants.labelsFileHeader.getBytes());
             logLabel("Don't know", Constants.MOOD_LABEL_COMMAND);
-            bufferOutPebble = new BufferedOutputStream(new FileOutputStream(new File(appDir, "pebbleAccel_" + deviceId + "_" + sdf.format(new Date()))));
-            bufferOutPhoneSynced = new BufferedOutputStream(new FileOutputStream(new File(appDir, "phoneAccel_" + deviceId + "_" + sdf.format(new Date()))));
+            bufferOutPebble = new BufferedOutputStream(new FileOutputStream(new File(appDir, "pebbleAccel_" + deviceId + "_" + sdf.format(new Date()) + ".bin")));
+            bufferOutPhoneSynced = new BufferedOutputStream(new FileOutputStream(new File(appDir, "phoneAccel_" + deviceId + "_" + sdf.format(new Date()) + ".bin")));
             phoneDataBuffer = new PhoneDataBuffer(Constants.BUFFER_SIZE);
 
             Log.d(Constants.TAG, "Files created...");
@@ -357,7 +357,7 @@ public class LoggingService extends Service {
 
     @Override
     public void onDestroy() {
-        Log.d(Constants.TAG, "Ayyyyy");
+        Log.d(Constants.TAG, "Destroying service");
         // Cancel the persistent notification.
         notificationManager.cancel(NOTIFICATION);
 

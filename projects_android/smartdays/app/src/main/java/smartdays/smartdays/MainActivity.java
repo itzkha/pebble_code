@@ -30,6 +30,13 @@ import com.getpebble.android.kit.PebbleKit;
 import com.getpebble.android.kit.util.PebbleDictionary;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
+import com.squareup.okhttp.Headers;
+import com.squareup.okhttp.MediaType;
+import com.squareup.okhttp.MultipartBuilder;
+import com.squareup.okhttp.OkHttpClient;
+import com.squareup.okhttp.Request;
+import com.squareup.okhttp.RequestBody;
+import com.squareup.okhttp.Response;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -39,6 +46,7 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 
 
@@ -55,7 +63,6 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
     private DropboxAPI<AndroidAuthSession> mDBApi;
     private String dropboxAccessToken;
     private boolean dropboxAuthenticating = false;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,7 +84,8 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
         textViewMessage.setText("");
 
         textViewCurrentActivity = (TextView) findViewById(R.id.textViewCurrentActivity);
-        textViewCurrentActivity.setText("No activity");
+        SharedPreferences preferences = getSharedPreferences("smartdays", 0);
+        textViewCurrentActivity.setText(preferences.getString("currentActivity", "No activity"));
 
         //------------------------------------------------------------------------------------------
         final Button buttonStart = (Button) findViewById(R.id.buttonStart);
@@ -195,8 +203,7 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
         AppKeyPair appKeys = new AppKeyPair(Constants.DROPBOX_APP_KEY, Constants.DROPBOX_APP_SECRET);
         AndroidAuthSession session = new AndroidAuthSession(appKeys, Session.AccessType.APP_FOLDER);
         mDBApi = new DropboxAPI<AndroidAuthSession>(session);
-        SharedPreferences settings = getSharedPreferences("dropbox", 0);
-        dropboxAccessToken = settings.getString("token", "");
+        dropboxAccessToken = preferences.getString("dropboxToken", "");
         if (dropboxAccessToken.length() == 0) {
             dropboxAuthenticating = true;
             mDBApi.getSession().startOAuth2Authentication(this);
@@ -210,6 +217,7 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
         Log.d(Constants.TAG, "Ready...");
     }
 
+    @Override
     protected void onResume() {
         super.onResume();
 
@@ -219,9 +227,9 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
                     // Required to complete auth, sets the access token on the session
                     mDBApi.getSession().finishAuthentication();
                     dropboxAccessToken = mDBApi.getSession().getOAuth2AccessToken();
-                    SharedPreferences settings = getSharedPreferences("dropbox", 0);
+                    SharedPreferences settings = getSharedPreferences("smartdays", 0);
                     SharedPreferences.Editor editor = settings.edit();
-                    editor.putString("token", dropboxAccessToken);
+                    editor.putString("dropboxToken", dropboxAccessToken);
                     editor.commit();
                 } catch (IllegalStateException e) {
                     Log.d(Constants.TAG, "Error authenticating", e);
@@ -234,6 +242,16 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
             dropboxAuthenticating = false;
             Log.d(Constants.TAG, "Token: " + dropboxAccessToken);
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        SharedPreferences settings = getSharedPreferences("smartdays", 0);
+        SharedPreferences.Editor editor = settings.edit();
+        editor.putString("currentActivity", String.valueOf(textViewCurrentActivity.getText()));
+        editor.commit();
+
+        super.onDestroy();
     }
 
     private boolean isGooglePlayServicesAvailable() {
@@ -273,15 +291,38 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
         File appDir = new File(Environment.getExternalStorageDirectory() + "/smartdays");
         File files[] = appDir.listFiles();
 
-        new DropboxUploader().execute(files);
+        new HTTPUploader().execute(files);
     }
 
-    private class DropboxUploader extends AsyncTask<File, Integer, Integer> {
+    private class HTTPUploader extends AsyncTask<File, Integer, Integer> {
+        private final OkHttpClient client = new OkHttpClient();
+        public final MediaType MEDIA_TYPE_BINARY = MediaType.parse("application/octet-stream");
+
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
-            ((Button)findViewById(R.id.buttonStart)).setEnabled(false);
             ((Button)findViewById(R.id.buttonFiles)).setEnabled(false);
+            ((Button)findViewById(R.id.buttonFiles)).setText("Uploading files");
+            ((Button)findViewById(R.id.buttonStart)).setEnabled(false);
+        }
+
+        private void uploadFile(File file) throws IOException {
+            String encodedFilename = URLEncoder.encode(file.getName());
+            Request request = new Request.Builder()
+                .url("http://10.192.54.154:5000/upload?filename=" + encodedFilename)
+                .post(RequestBody.create(MEDIA_TYPE_BINARY, file))
+                .build();
+
+            Response response = client.newCall(request).execute();
+            if (!response.isSuccessful()) {
+                throw new IOException("Unexpected code " + response);
+            }
+            else {
+                file.delete();
+            }
+
+            System.out.println(response.body().string());
+
         }
 
         @Override
@@ -290,38 +331,14 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
             ProgressBar progressFiles = (ProgressBar) findViewById(R.id.progressBarFiles);
             progressFiles.setMax(100);
             progressFiles.setProgress(0);
-            String deviceId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
 
             for (int i=0; i < files.length; i++) {
                 Log.d(Constants.TAG, files[i].getName());
                 try {
-                    DropboxAPI.Entry inDB = mDBApi.metadata("/" + deviceId + "/" + files[i].getName(), 1, null, false, null);
-                    Log.d(Constants.TAG, "The file already exists");
-                    if ( (((CheckBox)findViewById(R.id.checkBoxDeleteFiles)).isChecked()) && (inDB.bytes == files[i].length())) {
-                        Log.d(Constants.TAG, "The files have the same length... deleting");
-                        files[i].delete();
-                    }
-                }
-                catch (DropboxUnlinkedException e) {
-                    Log.d(Constants.TAG, "Error. DropBox unlinked");
-                }
-                catch (DropboxException de1) {
-                    Log.d(Constants.TAG, "The file does not exist");
-                    // Upload it
-                    try {
-                        FileInputStream inputStream = new FileInputStream(files[i]);
-                        //DropboxAPI.Entry response = mDBApi.putFile("/" + deviceId + "/" + files[i].getName(), inputStream, files[i].length(), null, null);
-                        DropboxAPI.Entry response = mDBApi.putFileOverwrite("/" + deviceId + "/" + files[i].getName(), inputStream, files[i].length(), null);
-                    }
-                    catch (FileNotFoundException fnfe) {
-                        Log.d(Constants.TAG, "Error. file: " + files[i].getName() + " not found.");
-                    }
-                    catch (DropboxUnlinkedException e) {
-                        Log.d(Constants.TAG, "Error. DropBox unlinked");
-                    }
-                    catch (DropboxException de2) {
-                        Log.d(Constants.TAG, "Error. DropBox exception");
-                    }
+                    uploadFile(files[i]);
+                } catch (IOException e) {
+                    Log.e(Constants.TAG, "Error uploading file " + files[i].getAbsolutePath(), e);
+                    e.printStackTrace();
                 }
                 progressFiles.setProgress((int) (100 * (i+1) / (float)files.length));
             }
@@ -336,7 +353,9 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
         protected void onPostExecute(Integer result) {
             super.onPostExecute(result);
             ((Button)findViewById(R.id.buttonFiles)).setEnabled(true);
+            ((Button)findViewById(R.id.buttonFiles)).setText("Upload files");
             ((Button)findViewById(R.id.buttonStart)).setEnabled(true);
+
         }
     }
 

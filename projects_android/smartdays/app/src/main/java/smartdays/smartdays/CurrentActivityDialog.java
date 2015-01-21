@@ -38,10 +38,6 @@ public class CurrentActivityDialog extends DialogFragment {
         activities = a;
     }
 
-    public ListView getListView() {
-        return listView;
-    }
-
     public interface NoticeDialogListener {
         public void onDialogPositiveClick(String activity);
     }

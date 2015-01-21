@@ -40,7 +40,7 @@ static Window *s_activity_window;
 static MenuLayer *s_menu_activity_layer;
 static char* menu_activity_items[MAX_MENU_ITEMS];
 static uint8_t menu_items_counter = 0;
-static bool already_populated = false;
+static bool empty_menu = true;
 
 static Window *s_mood_window;
 static MenuLayer *s_menu_mood_layer;
@@ -147,7 +147,7 @@ static void append_to_menu(char* item) {
   strncpy(menu_activity_items[menu_items_counter % MAX_MENU_ITEMS], item, MAX_MENU_ITEM_LENGTH);
   menu_items_counter++;
   menu_layer_reload_data(s_menu_activity_layer);
-  already_populated = true;
+  empty_menu = false;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -194,7 +194,7 @@ void menu_select_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *da
   switch (cell_index->row) {
     case 0:
       window_stack_push(s_activity_window, true);
-      if (!already_populated) {
+      if (empty_menu) {
         send_command(SYNC_MENU_ITEM_COMMAND);
       }
       // Populate menu
@@ -379,7 +379,7 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
             if (window_stack_get_top_window() != s_activity_window) {
               window_stack_push(s_activity_window, true);
             }
-            if (!already_populated) {
+            if (empty_menu) {
               send_command(SYNC_MENU_ITEM_COMMAND);
             }
             break;
