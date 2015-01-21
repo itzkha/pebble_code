@@ -34,6 +34,11 @@ import com.google.android.gms.common.GooglePlayServicesUtil;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 
 
@@ -51,10 +56,7 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
     private String dropboxAccessToken;
     private boolean dropboxAuthenticating = false;
 
-    public static MainActivity getInstance() {
-        return instance;
-    }
-    
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -234,10 +236,6 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
         }
     }
 
-    protected void onDestroy() {
-
-    }
-
     private boolean isGooglePlayServicesAvailable() {
         int status = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
         if (ConnectionResult.SUCCESS == status) {
@@ -267,22 +265,25 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
         if (askService(Constants.ACTIVITY_LABEL_COMMAND, activity)) {
             textViewCurrentActivity.setText(activity);
         }
-
     }
 
     private void uploadFiles() {
         Log.d(Constants.TAG, "Uploading...");
-        ((TextView)findViewById(R.id.textViewMessage)).setText("Uploading files...");
-        ((Button)findViewById(R.id.buttonFiles)).setEnabled(false);
 
         File appDir = new File(Environment.getExternalStorageDirectory() + "/smartdays");
         File files[] = appDir.listFiles();
 
-        ((TextView)findViewById(R.id.textViewMessage)).setText("Uploading files...");
         new DropboxUploader().execute(files);
     }
 
     private class DropboxUploader extends AsyncTask<File, Integer, Integer> {
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            ((Button)findViewById(R.id.buttonStart)).setEnabled(false);
+            ((Button)findViewById(R.id.buttonFiles)).setEnabled(false);
+        }
+
         @Override
         protected Integer doInBackground(File... files) {
             int counter = 0;
@@ -290,6 +291,7 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
             progressFiles.setMax(100);
             progressFiles.setProgress(0);
             String deviceId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+
             for (int i=0; i < files.length; i++) {
                 Log.d(Constants.TAG, files[i].getName());
                 try {
@@ -308,8 +310,8 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
                     // Upload it
                     try {
                         FileInputStream inputStream = new FileInputStream(files[i]);
-                        DropboxAPI.Entry response = mDBApi.putFile("/" + deviceId + "/" + files[i].getName(), inputStream, files[i].length(), null, null);
-                        //DropboxAPI.Entry response = mDBApi.putFileOverwrite(files[i].getName(), inputStream, files[i].length(), null);
+                        //DropboxAPI.Entry response = mDBApi.putFile("/" + deviceId + "/" + files[i].getName(), inputStream, files[i].length(), null, null);
+                        DropboxAPI.Entry response = mDBApi.putFileOverwrite("/" + deviceId + "/" + files[i].getName(), inputStream, files[i].length(), null);
                     }
                     catch (FileNotFoundException fnfe) {
                         Log.d(Constants.TAG, "Error. file: " + files[i].getName() + " not found.");
@@ -332,9 +334,9 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
 
         @Override
         protected void onPostExecute(Integer result) {
-            ((TextView)findViewById(R.id.textViewMessage)).setText("Logging stopped...");
+            super.onPostExecute(result);
             ((Button)findViewById(R.id.buttonFiles)).setEnabled(true);
-
+            ((Button)findViewById(R.id.buttonStart)).setEnabled(true);
         }
     }
 

@@ -18,10 +18,6 @@ import android.provider.Settings;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.dropbox.client2.DropboxAPI;
-import com.dropbox.client2.android.AndroidAuthSession;
-import com.dropbox.client2.session.AppKeyPair;
-import com.dropbox.client2.session.Session;
 import com.getpebble.android.kit.PebbleKit;
 import com.getpebble.android.kit.util.PebbleDictionary;
 
@@ -91,7 +87,7 @@ public class LoggingService extends Service {
 
     @Override
     public void onCreate() {
-        Log.d(Constants.TAG, "Creating...");
+        Log.d(Constants.TAG, "Creating..." + this);
         if (instance == null) {
             instance = this;
         }
@@ -103,9 +99,6 @@ public class LoggingService extends Service {
 
         PowerManager pm = (PowerManager) this.getSystemService(Context.POWER_SERVICE);
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, Constants.TAG);
-
-        // Display a notification about us starting.  We put an icon in the status bar.
-        showNotification();
 
         pebbleAppMessageDataReceiver = new PebbleKit.PebbleDataReceiver(Constants.WATCHAPP_UUID) {
             long currentTime;
@@ -289,7 +282,7 @@ public class LoggingService extends Service {
         synchronizationLabellingHandler.postDelayed(runnableSynchronizationLabelling, Constants.SYNCHRONIZATION_LABELLING_SHORT_PERIOD);         // Request first timestamp
         //------------------------------------------------------------------------------------------
 
-        fusedLocationService = new FusedLocationService(MainActivity.getInstance());
+        fusedLocationService = new FusedLocationService(getApplicationContext());
 
         //------------------------------------------------------------------------------------------
         try {
@@ -344,6 +337,11 @@ public class LoggingService extends Service {
         Log.i("LocalService", "Received start id " + startId + ": " + intent);
 
         if (!running) {
+
+            // Display a notification about us starting.  We put an icon in the status bar.
+            Notification notification = showNotification();
+            startForeground(NOTIFICATION, notification);
+
             dataloggingReceiver = new SmartDaysPebbleDataLogReceiver(Constants.WATCHAPP_UUID, bufferOutPebble, bufferOutPhoneSynced, phoneDataBuffer);
             //phoneSensorEventListener = new PhoneSensorEventListener(phoneDataBuffer, bufferOutPhone);
             phoneSensorEventListener = new PhoneSensorEventListener(phoneDataBuffer);
@@ -359,6 +357,7 @@ public class LoggingService extends Service {
 
     @Override
     public void onDestroy() {
+        Log.d(Constants.TAG, "Ayyyyy");
         // Cancel the persistent notification.
         notificationManager.cancel(NOTIFICATION);
 
@@ -470,7 +469,7 @@ public class LoggingService extends Service {
     /**
      * Show a notification while this service is running.
      */
-    private void showNotification() {
+    private Notification showNotification() {
         // In this sample, we'll use the same text for the ticker and the expanded notification
         CharSequence text = getText(R.string.local_service_started);
 
@@ -492,6 +491,7 @@ public class LoggingService extends Service {
 
         // Tell the user we started.
         Toast.makeText(this, R.string.local_service_started, Toast.LENGTH_SHORT).show();
+        return notification;
     }
 
     private void startLoggingPebble() {

@@ -4,6 +4,7 @@ package smartdays.smartdays;
  * Created by root on 1/17/15.
  */
 import android.app.Activity;
+import android.content.Context;
 import android.location.Location;
 import android.os.Bundle;
 
@@ -29,14 +30,13 @@ public class FusedLocationService implements LocationListener, GoogleApiClient.C
     private Location location;
     private FusedLocationProviderApi fusedLocationProviderApi = LocationServices.FusedLocationApi;
 
-    public FusedLocationService(Activity locationActivity) {
+    public FusedLocationService(Context context) {
         locationRequest = LocationRequest.create();
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         locationRequest.setInterval(INTERVAL);
         locationRequest.setFastestInterval(FASTEST_INTERVAL);
-        this.locationActivity = locationActivity;
 
-        googleApiClient = new GoogleApiClient.Builder(locationActivity)
+        googleApiClient = new GoogleApiClient.Builder(context)
                 .addApi(LocationServices.API)
                 .addConnectionCallbacks(this)
                 .addOnConnectionFailedListener(this)
