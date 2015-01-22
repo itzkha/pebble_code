@@ -148,16 +148,7 @@
                 android:id="@+id/buttonFiles"
                 android:layout_margin="5dp"
                 android:layout_alignParentBottom="false"
-                android:enabled="false" />
-
-            <CheckBox
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content"
-                android:text="Delete local files"
-                android:id="@+id/checkBoxDeleteFiles"
-                android:checked="true"
-                android:layout_below="@+id/buttonFiles"
-                android:layout_margin="5dp" />
+                android:enabled="true" />
 
             <ProgressBar
                 style="?android:attr/progressBarStyleHorizontal"
@@ -166,10 +157,19 @@
                 android:id="@+id/progressBarFiles"
                 android:layout_alignEnd="@+id/buttonFiles"
                 android:layout_margin="5dp"
-                android:layout_below="@+id/checkBoxDeleteFiles"
                 android:max="100"
                 android:progress="0"
-                android:indeterminate="false" />
+                android:indeterminate="false"
+                android:layout_below="@+id/buttonFiles" />
+
+            <TextView
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:id="@+id/textViewFiles"
+                android:layout_below="@+id/progressBarFiles"
+                android:layout_alignParentLeft="false"
+                android:layout_margin="5dp" />
         </RelativeLayout>
 
     </LinearLayout>

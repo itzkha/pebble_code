@@ -16,9 +16,19 @@ def allowed_file(filename):
     
 @app.route('/upload', methods=['POST'])
 def handle_upload():
+    folder = ''
     filename = request.args.get('filename')
-    filename = secure_filename(filename)
-    server_filename = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+
+    folder_and_filename = filename.split('/')
+    if len(folder_and_filename) > 1:
+        folder = secure_filename(folder_and_filename[0])
+        filename = secure_filename(folder_and_filename[1])
+    
+    folder = os.path.join(app.config['UPLOAD_FOLDER'], folder)
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+        
+    server_filename = os.path.join(folder, filename)
     assert filename is not None
     with open(server_filename, 'w') as f:
         f.write(request.stream.read())

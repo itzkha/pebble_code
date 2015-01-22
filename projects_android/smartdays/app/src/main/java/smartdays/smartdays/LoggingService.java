@@ -6,6 +6,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.hardware.Sensor;
 import android.hardware.SensorManager;
 import android.location.Location;
@@ -292,17 +293,37 @@ public class LoggingService extends Service {
             }
 
             // Create the files
+            String fileName;
+            Date date = new Date();
+            SharedPreferences settings = getSharedPreferences("smartdays", 0);
+            SharedPreferences.Editor editor = settings.edit();
+
             String deviceId = Settings.Secure.getString(this.getContentResolver(), Settings.Secure.ANDROID_ID);
             SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
 
-            bufferOutLabelActivity = new BufferedOutputStream(new FileOutputStream(new File(appDir, "activity_" + deviceId + "_" + sdf.format(new Date()) + ".csv")));
+            fileName = "activity_" + deviceId + "_" + sdf.format(date) + ".csv";
+            bufferOutLabelActivity = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
             bufferOutLabelActivity.write(Constants.labelsFileHeader.getBytes());
             logLabel("No activity", Constants.ACTIVITY_LABEL_COMMAND);
-            bufferOutLabelMood = new BufferedOutputStream(new FileOutputStream(new File(appDir, "mood_" + deviceId + "_" + sdf.format(new Date()) + ".csv")));
+            editor.putString("activityFileName", fileName);
+
+            fileName = "mood_" + deviceId + "_" + sdf.format(date) + ".csv";
+            bufferOutLabelMood = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
             bufferOutLabelMood.write(Constants.labelsFileHeader.getBytes());
             logLabel("Don't know", Constants.MOOD_LABEL_COMMAND);
-            bufferOutPebble = new BufferedOutputStream(new FileOutputStream(new File(appDir, "pebbleAccel_" + deviceId + "_" + sdf.format(new Date()) + ".bin")));
-            bufferOutPhoneSynced = new BufferedOutputStream(new FileOutputStream(new File(appDir, "phoneAccel_" + deviceId + "_" + sdf.format(new Date()) + ".bin")));
+            editor.putString("moodFileName", fileName);
+
+            fileName = "pebbleAccel_" + deviceId + "_" + sdf.format(date) + ".bin";
+            bufferOutPebble = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
+            editor.putString("pebbleAccelFileName", fileName);
+
+            fileName = "phoneAccel_" + deviceId + "_" + sdf.format(date) + ".bin";
+            bufferOutPhoneSynced = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
+            editor.putString("phoneAccelFileName", fileName);
+
+            editor.commit();
+            askActivity(Constants.NEW_FILES_COMMAND);
+
             phoneDataBuffer = new PhoneDataBuffer(Constants.BUFFER_SIZE);
 
             Log.d(Constants.TAG, "Files created...");
@@ -460,6 +481,17 @@ public class LoggingService extends Service {
 
     private void stop() {
         freeResources();
+
+        SharedPreferences settings = getSharedPreferences("smartdays", 0);
+        SharedPreferences.Editor editor = settings.edit();
+        editor.putString("activityFileName", "");
+        editor.putString("moodFileName", "");
+        editor.putString("pebbleAccelFileName", "");
+        editor.putString("phoneAccelFileName", "");
+        editor.commit();
+        askActivity(Constants.NEW_FILES_COMMAND);
+
+
         askActivity(Constants.SERVICE_STOPPED);
 
         // Then stop

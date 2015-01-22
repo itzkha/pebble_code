@@ -32,12 +32,10 @@ public class Constants {
     public static final int ACTIVITY_LABEL_COMMAND = 21;
     public static final int MOOD_LABEL_COMMAND = 28;
     public static final float MOOD_ACTIVITY_RATIO = 0.1f;
+    public static final int NEW_FILES_COMMAND = 28;
 
     public static final int SERVICE_STOPPED = 43;
 
     public static final String labelsFileHeader = "label,timestamp,latitute,longitude,altitute,accuracy,provider\n";
-
-    public static final String DROPBOX_APP_KEY = "fuznchohlrpzq7s";
-    public static final String DROPBOX_APP_SECRET = "agrk7cc32i02i6i";
 
 }

@@ -15,39 +15,26 @@ import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.dropbox.client2.DropboxAPI;
-import com.dropbox.client2.android.AndroidAuthSession;
-import com.dropbox.client2.exception.DropboxException;
-import com.dropbox.client2.exception.DropboxUnlinkedException;
-import com.dropbox.client2.session.AppKeyPair;
-import com.dropbox.client2.session.Session;
 import com.getpebble.android.kit.PebbleKit;
 import com.getpebble.android.kit.util.PebbleDictionary;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
-import com.squareup.okhttp.Headers;
 import com.squareup.okhttp.MediaType;
-import com.squareup.okhttp.MultipartBuilder;
 import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
 import com.squareup.okhttp.RequestBody;
 import com.squareup.okhttp.Response;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLConnection;
+import java.net.ConnectException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 
 public class MainActivity extends Activity implements  CurrentActivityDialog.NoticeDialogListener {
@@ -59,10 +46,7 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
     private ArrayList<String> activities;
     private CurrentActivityDialog currentActivityDialog;
     private TextView textViewCurrentActivity;
-
-    private DropboxAPI<AndroidAuthSession> mDBApi;
-    private String dropboxAccessToken;
-    private boolean dropboxAuthenticating = false;
+    private String[] currentNames = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,18 +57,26 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
             finish();
         }
 
-
         setContentView(R.layout.activity_main);
         instance = this;
 
         intent = new Intent(this, LoggingService.class);
+
+        SharedPreferences preferences = getSharedPreferences("smartdays", 0);
+
+        //------------------------------------------------------------------------------------------
+        currentNames = new String[4];
+        currentNames[0] = preferences.getString("activityFileName", "");
+        currentNames[1] = preferences.getString("moodFileName", "");
+        currentNames[2] = preferences.getString("pebbleAccelFileName", "");
+        currentNames[3] = preferences.getString("phoneAccelFileName", "");
+        Log.d(Constants.TAG, "File names:" + Arrays.toString(currentNames));
 
         //------------------------------------------------------------------------------------------
         final TextView textViewMessage = (TextView) findViewById(R.id.textViewMessage);
         textViewMessage.setText("");
 
         textViewCurrentActivity = (TextView) findViewById(R.id.textViewCurrentActivity);
-        SharedPreferences preferences = getSharedPreferences("smartdays", 0);
         textViewCurrentActivity.setText(preferences.getString("currentActivity", "No activity"));
 
         //------------------------------------------------------------------------------------------
@@ -96,13 +88,11 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
             textViewMessage.setText("Logging started...");
             buttonStart.setEnabled(false);
             buttonStop.setEnabled(true);
-            buttonFiles.setEnabled(false);
         }
         else {
             textViewMessage.setText("Logging stopped...");
             buttonStart.setEnabled(true);
             buttonStop.setEnabled(false);
-            buttonFiles.setEnabled(true);
         }
 
         buttonStart.setOnClickListener(new View.OnClickListener() {
@@ -117,8 +107,8 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
                         textViewMessage.setText("Logging started...");
                         buttonStart.setEnabled(false);
                         buttonStop.setEnabled(true);
-                        buttonFiles.setEnabled(false);
-                    } else {
+                    }
+                    else {
                         textViewMessage.setText("Watch is not connected.\nConnect to a Pebble first");
                     }
                 }
@@ -177,7 +167,6 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
                         textViewMessage.setText("Logging stopped...");
                         buttonStart.setEnabled(true);
                         buttonStop.setEnabled(false);
-                        buttonFiles.setEnabled(true);
                         uploadFiles();
                         break;
                     case Constants.SYNC_MENU_ITEM_COMMAND:
@@ -193,6 +182,14 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
                     case Constants.ACTIVITY_LABEL_COMMAND:
                         textViewCurrentActivity.setText(msg.obj.toString());
                         break;
+                    case Constants.NEW_FILES_COMMAND:
+                        SharedPreferences preferences = getSharedPreferences("smartdays", 0);
+                        currentNames[0] = preferences.getString("activityFileName", "");
+                        currentNames[1] = preferences.getString("moodFileName", "");
+                        currentNames[2] = preferences.getString("pebbleAccelFileName", "");
+                        currentNames[3] = preferences.getString("phoneAccelFileName", "");
+                        Log.d(Constants.TAG, "File names:" + Arrays.toString(currentNames));
+                        break;
                 }
 
     			super.handleMessage(msg);
@@ -200,48 +197,7 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
     	};
 
         //------------------------------------------------------------------------------------------
-        AppKeyPair appKeys = new AppKeyPair(Constants.DROPBOX_APP_KEY, Constants.DROPBOX_APP_SECRET);
-        AndroidAuthSession session = new AndroidAuthSession(appKeys, Session.AccessType.APP_FOLDER);
-        mDBApi = new DropboxAPI<AndroidAuthSession>(session);
-        dropboxAccessToken = preferences.getString("dropboxToken", "");
-        if (dropboxAccessToken.length() == 0) {
-            dropboxAuthenticating = true;
-            mDBApi.getSession().startOAuth2Authentication(this);
-        }
-        else {
-            mDBApi.getSession().setOAuth2AccessToken(dropboxAccessToken);
-        }
-        Log.d(Constants.TAG, "Token: " + dropboxAccessToken);
-
-        //------------------------------------------------------------------------------------------
         Log.d(Constants.TAG, "Ready...");
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-
-        if (dropboxAuthenticating) {
-            if (mDBApi.getSession().authenticationSuccessful()) {
-                try {
-                    // Required to complete auth, sets the access token on the session
-                    mDBApi.getSession().finishAuthentication();
-                    dropboxAccessToken = mDBApi.getSession().getOAuth2AccessToken();
-                    SharedPreferences settings = getSharedPreferences("smartdays", 0);
-                    SharedPreferences.Editor editor = settings.edit();
-                    editor.putString("dropboxToken", dropboxAccessToken);
-                    editor.commit();
-                } catch (IllegalStateException e) {
-                    Log.d(Constants.TAG, "Error authenticating", e);
-                }
-            }
-            else {
-                dropboxAccessToken = "";
-                Log.d(Constants.TAG, "Authentication failed");
-            }
-            dropboxAuthenticating = false;
-            Log.d(Constants.TAG, "Token: " + dropboxAccessToken);
-        }
     }
 
     @Override
@@ -303,44 +259,63 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
             super.onPreExecute();
             ((Button)findViewById(R.id.buttonFiles)).setEnabled(false);
             ((Button)findViewById(R.id.buttonFiles)).setText("Uploading files");
-            ((Button)findViewById(R.id.buttonStart)).setEnabled(false);
+            ((TextView)findViewById(R.id.textViewFiles)).setText("Uploading");
         }
 
-        private void uploadFile(File file) throws IOException {
-            String encodedFilename = URLEncoder.encode(file.getName());
+        private void uploadFile(String folder, File file) throws IOException {
+            String encodedFilename = URLEncoder.encode(folder + "/" + file.getName());
             Request request = new Request.Builder()
                 .url("http://10.192.54.154:5000/upload?filename=" + encodedFilename)
                 .post(RequestBody.create(MEDIA_TYPE_BINARY, file))
                 .build();
 
-            Response response = client.newCall(request).execute();
-            if (!response.isSuccessful()) {
-                throw new IOException("Unexpected code " + response);
+            try {
+                Response response = client.newCall(request).execute();
+                if (!response.isSuccessful()) {
+                    throw new IOException("Unexpected code " + response);
+                }
+                System.out.println(response.body().string());
             }
-            else {
-                file.delete();
+            catch (ConnectException ce) {
+                throw new IOException("Impossible to connect to server");
             }
-
-            System.out.println(response.body().string());
 
         }
 
         @Override
         protected Integer doInBackground(File... files) {
             int counter = 0;
+            int i, j;
+            boolean skip;
+
+            String folder = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+
             ProgressBar progressFiles = (ProgressBar) findViewById(R.id.progressBarFiles);
-            progressFiles.setMax(100);
+            progressFiles.setMax(files.length);
             progressFiles.setProgress(0);
 
-            for (int i=0; i < files.length; i++) {
+            for (i = 0; i < files.length; i++) {
                 Log.d(Constants.TAG, files[i].getName());
-                try {
-                    uploadFile(files[i]);
-                } catch (IOException e) {
-                    Log.e(Constants.TAG, "Error uploading file " + files[i].getAbsolutePath(), e);
-                    e.printStackTrace();
+                skip = false;
+                for (j = 0; j < 4; j++) {
+                    skip |= (files[i].getName().compareTo(currentNames[j]) == 0);
                 }
-                progressFiles.setProgress((int) (100 * (i+1) / (float)files.length));
+                if (skip) {
+                    Log.d(Constants.TAG, "Skipping: " + files[i].getName());
+                }
+                else {
+                    try {
+                        uploadFile(folder, files[i]);
+                        counter++;
+                        files[i].delete();
+                    }
+                    catch (IOException ioe) {
+                        Log.e(Constants.TAG, "Error uploading file " + files[i].getAbsolutePath(), ioe);
+                        ioe.printStackTrace();
+                        //progressFiles.setBackgroundColor(getResources().getColor(R.color.red));
+                    }
+                }
+                progressFiles.setProgress(i + 1);
             }
             return counter;
         }
@@ -354,8 +329,7 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
             super.onPostExecute(result);
             ((Button)findViewById(R.id.buttonFiles)).setEnabled(true);
             ((Button)findViewById(R.id.buttonFiles)).setText("Upload files");
-            ((Button)findViewById(R.id.buttonStart)).setEnabled(true);
-
+            ((TextView)findViewById(R.id.textViewFiles)).setText(String.valueOf(result) + " files uploaded");
         }
     }
 
