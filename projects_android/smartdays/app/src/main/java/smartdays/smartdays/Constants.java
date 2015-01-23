@@ -16,8 +16,8 @@ public class Constants {
     public static final int PHONE_SAMPLING_PERIOD_MS = (PEBBLE_SAMPLING_PERIOD_MS / 2);             // 20 mS
     public static final int PHONE_SAMPLING_PERIOD_NS = (PEBBLE_SAMPLING_PERIOD_MS / 2) * 1000000;   // 20 mS
     public static final int SYNCHRONIZATION_LABELLING_LONG_PERIOD = 1000 * 60 * 5;                  // 5 minutes
-    public static final int SYNCHRONIZATION_LABELLING_SHORT_PERIOD = 500;                           // 0.5 seconds
-    public static final int MAX_FAILS = 10;
+    public static final int SYNCHRONIZATION_LABELLING_SHORT_PERIOD = 1000;                          // 1 second
+    public static final int MAX_FAILS = 5;
     public static final int NUMBER_OF_SYNCS = 5;
     public static final int BUFFER_SIZE = (int) (5 * 60 / ((float)PHONE_SAMPLING_PERIOD_MS/1000));  //~ 5 minutes
 

@@ -39,7 +39,8 @@
                 android:layout_column="2"
                 android:layout_row="1"
                 android:layout_columnSpan="2"
-                android:layout_margin="5dp" />
+                android:layout_margin="5dp"
+                android:longClickable="true" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -73,7 +74,7 @@
 
         <Space
             android:layout_width="fill_parent"
-            android:layout_height="40dp"
+            android:layout_height="30dp"
             android:layout_margin="5dp" />
 
         <GridLayout
@@ -127,7 +128,7 @@
 
         <Space
             android:layout_width="fill_parent"
-            android:layout_height="40dp"
+            android:layout_height="30dp"
             android:layout_margin="5dp" />
 
         <RelativeLayout
@@ -165,6 +166,12 @@
                 android:layout_alignParentLeft="false"
                 android:layout_margin="5dp" />
         </RelativeLayout>
+
+        <Button
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="test"
+            android:id="@+id/buttonTest" />
 
     </LinearLayout>
 

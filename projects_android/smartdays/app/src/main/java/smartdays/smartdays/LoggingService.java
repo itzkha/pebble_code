@@ -129,7 +129,6 @@ public class LoggingService extends Service {
                         //    catch (IOException ioe) {
                         //    }
                         //}
-                        timestampCounter++;
                         Log.d(Constants.TAG, "counter: " + String.valueOf(timestampCounter));
                         break;
                     case Constants.SYNC_MENU_ITEM_COMMAND:
@@ -263,6 +262,7 @@ public class LoggingService extends Service {
             public void run() {
                 // ask for timestamp shift
                 PebbleKit.startAppOnPebble(getApplicationContext(), Constants.WATCHAPP_UUID);
+                timestampCounter++;
 
                 if (timestampCounter <= Constants.NUMBER_OF_SYNCS) {
                     sendCommand(Constants.TIMESTAMP_COMMAND);                                       // ask for timestamp
@@ -344,6 +344,9 @@ public class LoggingService extends Service {
                         break;
                     case Constants.SYNC_MENU_ITEM_COMMAND:
                         sendCommand(msg.obj.toString());
+                        break;
+                    case Constants.STOP_COMMAND:
+                        stop();
                         break;
                 }
                 super.handleMessage(msg);

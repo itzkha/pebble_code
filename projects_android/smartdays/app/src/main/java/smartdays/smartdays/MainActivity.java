@@ -45,6 +45,7 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
     private int menuItemInitIndex = 0;
     private ArrayList<String> activities;
     private CurrentActivityDialog currentActivityDialog;
+    private ActivityViewDialog activityViewDialog;
     private TextView textViewCurrentActivity;
     private String[] currentNames = null;
 
@@ -118,13 +119,24 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
         buttonStop.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 if (LoggingService.isRunning()) {
-                    //------------------------------------------------------------------------------ Try to stop background worker on the Pebble
-                    PebbleKit.startAppOnPebble(getApplicationContext(), Constants.WATCHAPP_UUID);
+                    if (PebbleKit.isWatchConnected(instance)) {
+                        //-------------------------------------------------------------------------- Try to stop background worker on the Pebble
+                        PebbleKit.startAppOnPebble(getApplicationContext(), Constants.WATCHAPP_UUID);
 
-                    PebbleDictionary data = new PebbleDictionary();
-                    data.addUint8(Constants.COMMAND_KEY, (byte) Constants.STOP_COMMAND);
-                    PebbleKit.sendDataToPebbleWithTransactionId(getApplicationContext(), Constants.WATCHAPP_UUID, data, Constants.STOP_COMMAND);
+                        PebbleDictionary data = new PebbleDictionary();
+                        data.addUint8(Constants.COMMAND_KEY, (byte) Constants.STOP_COMMAND);
+                        PebbleKit.sendDataToPebbleWithTransactionId(getApplicationContext(), Constants.WATCHAPP_UUID, data, Constants.STOP_COMMAND);
+                    }
+                    else {
+                        textViewMessage.setText("Watch is not connected.\nConnect to a Pebble first.\nOr long press for emergency stop.");
+                    }
                 }
+            }
+        });
+        buttonStop.setOnLongClickListener(new View.OnLongClickListener() {
+            public boolean onLongClick(View v) {
+                askService(Constants.STOP_COMMAND, "");
+                return true;
             }
         });
 
@@ -156,6 +168,19 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
                 currentActivityDialog.show(getFragmentManager(), "Current activity");
             }
         });
+
+        //------------------------------------------------------------------------------------------
+        activityViewDialog = new ActivityViewDialog();
+        activityViewDialog.setOptions(activities);
+        final Button buttonTest = (Button) findViewById(R.id.buttonTest);
+        buttonTest.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                activityViewDialog.show(getFragmentManager(), "Test");
+            }
+        });
+        buttonTest.setVisibility(View.INVISIBLE);
+
+
 
         //------------------------------------------------------------------------------------------
         serviceMessagesHandler = new Handler() {
@@ -325,19 +350,22 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
 
     public boolean uploadableFiles() {
         File appDir = new File(Environment.getExternalStorageDirectory() + "/smartdays");
-        File files[] = appDir.listFiles();
+        if (appDir.exists()) {
+            File files[] = appDir.listFiles();
 
-        boolean uploadable = false;
-        boolean temp;
+            boolean uploadable = false;
+            boolean temp;
 
-        for (File file : files) {
-            temp = true;
-            for (String currentFile : currentNames) {
-                temp &= !(file.getName().compareTo(currentFile) == 0);
+            for (File file : files) {
+                temp = true;
+                for (String currentFile : currentNames) {
+                    temp &= !(file.getName().compareTo(currentFile) == 0);
+                }
+                uploadable |= temp;
             }
-            uploadable |= temp;
+            return uploadable;
         }
-        return uploadable;
+        return false;
     }
 
     public void showFilesControl() {

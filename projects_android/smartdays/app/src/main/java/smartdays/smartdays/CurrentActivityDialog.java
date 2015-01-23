@@ -53,6 +53,7 @@ public class CurrentActivityDialog extends DialogFragment {
             throw new ClassCastException(activity.toString() + " must implement NoticeDialogListener");
         }
     }
+
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
 

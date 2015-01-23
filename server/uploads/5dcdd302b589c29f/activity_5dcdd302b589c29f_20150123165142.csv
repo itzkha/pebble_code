@@ -1,0 +1,4 @@
+label,timestamp,latitute,longitude,altitute,accuracy,provider
+No activity,1422028302740,NA,NA,NA,NA,NA
+Coffee,1422028310423,46.7801017,6.6598047,0.0,14.142,fused
+Work,1422028615544,46.7801017,6.6598047,0.0,14.142,fused
