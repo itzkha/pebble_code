@@ -491,6 +491,9 @@ public class LoggingService extends Service {
         editor.commit();
         askActivity(Constants.NEW_FILES_COMMAND);
 
+        editor.putString("currentActivity", "No activity");
+        editor.commit();
+        askActivity("No activity");
 
         askActivity(Constants.SERVICE_STOPPED);
 
@@ -587,6 +590,11 @@ public class LoggingService extends Service {
             }
             switch (command) {
                 case Constants.ACTIVITY_LABEL_COMMAND:
+                    SharedPreferences settings = getSharedPreferences("smartdays", 0);
+                    SharedPreferences.Editor editor = settings.edit();
+                    editor.putString("currentActivity", label);
+                    editor.commit();
+
                     bufferOutLabelActivity.write(line.getBytes());
                     bufferOutLabelActivity.flush();
                     break;

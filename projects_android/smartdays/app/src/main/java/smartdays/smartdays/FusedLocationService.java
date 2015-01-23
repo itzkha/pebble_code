@@ -50,9 +50,11 @@ public class FusedLocationService implements LocationListener, GoogleApiClient.C
     @Override
     public void onConnected(Bundle connectionHint) {
         Location currentLocation = fusedLocationProviderApi.getLastLocation(googleApiClient);
-        location = currentLocation;
 
-        Log.d(Constants.TAG, "Connected - Location= " + location.getTime());
+        if (currentLocation != null) {
+            location = currentLocation;
+            Log.d(Constants.TAG, "Connected - Location= " + location.getTime());
+        }
 
         /*
         if (currentLocation != null && currentLocation.getTime() > REFRESH_TIME) {

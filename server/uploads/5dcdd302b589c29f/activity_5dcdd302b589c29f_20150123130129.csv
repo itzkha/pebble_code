@@ -1,0 +1,3 @@
+label,timestamp,latitute,longitude,altitute,accuracy,provider
+No activity,1422014489622,NA,NA,NA,NA,NA
+Work,1422014498714,46.7800883,6.6597965,0.0,20.0,fused

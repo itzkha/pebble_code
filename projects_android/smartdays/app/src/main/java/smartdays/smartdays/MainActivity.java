@@ -128,6 +128,7 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
             }
         });
 
+        showFilesControl();
         buttonFiles.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 uploadFiles();
@@ -167,6 +168,7 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
                         textViewMessage.setText("Logging stopped...");
                         buttonStart.setEnabled(true);
                         buttonStop.setEnabled(false);
+                        showFilesControl();
                         uploadFiles();
                         break;
                     case Constants.SYNC_MENU_ITEM_COMMAND:
@@ -198,16 +200,6 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
 
         //------------------------------------------------------------------------------------------
         Log.d(Constants.TAG, "Ready...");
-    }
-
-    @Override
-    protected void onDestroy() {
-        SharedPreferences settings = getSharedPreferences("smartdays", 0);
-        SharedPreferences.Editor editor = settings.edit();
-        editor.putString("currentActivity", String.valueOf(textViewCurrentActivity.getText()));
-        editor.commit();
-
-        super.onDestroy();
     }
 
     private boolean isGooglePlayServicesAvailable() {
@@ -258,7 +250,6 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
         protected void onPreExecute() {
             super.onPreExecute();
             ((Button)findViewById(R.id.buttonFiles)).setEnabled(false);
-            ((Button)findViewById(R.id.buttonFiles)).setText("Uploading files");
             ((TextView)findViewById(R.id.textViewFiles)).setText("Uploading");
         }
 
@@ -327,10 +318,40 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
         @Override
         protected void onPostExecute(Integer result) {
             super.onPostExecute(result);
-            ((Button)findViewById(R.id.buttonFiles)).setEnabled(true);
-            ((Button)findViewById(R.id.buttonFiles)).setText("Upload files");
             ((TextView)findViewById(R.id.textViewFiles)).setText(String.valueOf(result) + " files uploaded");
+            ((Button) findViewById(R.id.buttonFiles)).setEnabled(uploadableFiles());
         }
     }
 
+    public boolean uploadableFiles() {
+        File appDir = new File(Environment.getExternalStorageDirectory() + "/smartdays");
+        File files[] = appDir.listFiles();
+
+        boolean uploadable = false;
+        boolean temp;
+
+        for (File file : files) {
+            temp = true;
+            for (String currentFile : currentNames) {
+                temp &= !(file.getName().compareTo(currentFile) == 0);
+            }
+            uploadable |= temp;
+        }
+        return uploadable;
+    }
+
+    public void showFilesControl() {
+        if (uploadableFiles()) {
+            ((Button)findViewById(R.id.buttonFiles)).setVisibility(View.VISIBLE);
+            ((ProgressBar) findViewById(R.id.progressBarFiles)).setVisibility(View.VISIBLE);
+            ((TextView) findViewById(R.id.textViewFiles)).setVisibility(View.VISIBLE);
+            ((Button)findViewById(R.id.buttonFiles)).setEnabled(true);
+        }
+        else {
+            ((Button)findViewById(R.id.buttonFiles)).setVisibility(View.INVISIBLE);
+            ((ProgressBar) findViewById(R.id.progressBarFiles)).setVisibility(View.INVISIBLE);
+            ((TextView) findViewById(R.id.textViewFiles)).setVisibility(View.INVISIBLE);
+            ((Button)findViewById(R.id.buttonFiles)).setEnabled(false);
+        }
+    }
 }

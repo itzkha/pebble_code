@@ -10,7 +10,7 @@
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
         android:layout_alignParentTop="true"
-        android:layout_alignParentStart="true">
+        android:layout_alignParentLeft="true">
 
         <RelativeLayout
             android:layout_width="fill_parent"
@@ -22,7 +22,6 @@
                 android:layout_height="wrap_content"
                 android:text="Start"
                 android:id="@+id/buttonStart"
-                android:layout_alignParentStart="false"
                 android:enabled="false"
                 android:layout_column="0"
                 android:layout_row="1"
@@ -36,7 +35,6 @@
                 android:text="Stop"
                 android:id="@+id/buttonStop"
                 android:layout_alignParentRight="true"
-                android:layout_alignParentEnd="false"
                 android:enabled="false"
                 android:layout_column="2"
                 android:layout_row="1"
@@ -49,7 +47,6 @@
                 android:textAppearance="?android:attr/textAppearanceLarge"
                 android:text="Logging"
                 android:id="@+id/textViewService"
-                android:layout_alignParentStart="false"
                 android:layout_alignParentLeft="true"
                 android:layout_alignTop="@+id/buttonStart"
                 android:layout_alignBottom="@+id/buttonStart"
@@ -91,7 +88,6 @@
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceLarge"
                 android:id="@+id/textViewLabel"
-                android:layout_alignParentStart="true"
                 android:layout_alignTop="@+id/buttonCurrentActivity"
                 android:layout_alignBottom="@+id/buttonCurrentActivity"
                 android:layout_toLeftOf="@+id/buttonCurrentActivity"
@@ -120,7 +116,6 @@
                 android:layout_height="wrap_content"
                 android:text="Change"
                 android:id="@+id/buttonCurrentActivity"
-                android:layout_alignParentEnd="true"
                 android:layout_margin="5dp"
                 android:layout_column="1"
                 android:layout_columnSpan="1"
@@ -155,7 +150,6 @@
                 android:layout_width="fill_parent"
                 android:layout_height="40dp"
                 android:id="@+id/progressBarFiles"
-                android:layout_alignEnd="@+id/buttonFiles"
                 android:layout_margin="5dp"
                 android:max="100"
                 android:progress="0"
