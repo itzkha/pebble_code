@@ -332,7 +332,6 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
                     catch (IOException ioe) {
                         Log.e(Constants.TAG, "Error uploading file " + files[i].getAbsolutePath(), ioe);
                         ioe.printStackTrace();
-                        //progressFiles.setBackgroundColor(getResources().getColor(R.color.red));
                     }
                 }
                 progressFiles.setProgress(i + 1);

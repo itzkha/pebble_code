@@ -6,8 +6,12 @@ UPLOAD_FOLDER = './uploads'
 ALLOWED_EXTENSIONS = set(['bin', 'csv'])
 
 app = Flask(__name__)
-app.debug = True
+app.debug = 'SMART_DEBUG' in os.environ
+#app.debug = True
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+if app.debug:
+    print 'Starting in debug mode'
 
 def allowed_file(filename):
     return '.' in filename and \
