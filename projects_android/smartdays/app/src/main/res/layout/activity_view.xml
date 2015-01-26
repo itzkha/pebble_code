@@ -32,6 +32,7 @@
         android:id="@+id/listViewTime"
         android:choiceMode="singleChoice"
         android:dividerHeight="0dp"
-        android:layout_weight="1" />
+        android:layout_weight="1"
+        android:divider="@color/white"/>
 
 </LinearLayout>

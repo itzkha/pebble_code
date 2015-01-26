@@ -45,7 +45,9 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
     private int menuItemInitIndex = 0;
     private ArrayList<String> activities;
     private CurrentActivityDialog currentActivityDialog;
+
     private ActivityViewDialog activityViewDialog;
+
     private TextView textViewCurrentActivity;
     private String[] currentNames = null;
 
@@ -66,11 +68,12 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
         SharedPreferences preferences = getSharedPreferences("smartdays", 0);
 
         //------------------------------------------------------------------------------------------
-        currentNames = new String[4];
+        currentNames = new String[5];
         currentNames[0] = preferences.getString("activityFileName", "");
         currentNames[1] = preferences.getString("moodFileName", "");
         currentNames[2] = preferences.getString("pebbleAccelFileName", "");
         currentNames[3] = preferences.getString("phoneAccelFileName", "");
+        currentNames[4] = preferences.getString("locationFileName", "");
         Log.d(Constants.TAG, "File names:" + Arrays.toString(currentNames));
 
         //------------------------------------------------------------------------------------------
@@ -170,6 +173,7 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
         });
 
         //------------------------------------------------------------------------------------------
+
         activityViewDialog = new ActivityViewDialog();
         activityViewDialog.setOptions(activities);
         final Button buttonTest = (Button) findViewById(R.id.buttonTest);
@@ -179,7 +183,6 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
             }
         });
         buttonTest.setVisibility(View.INVISIBLE);
-
 
 
         //------------------------------------------------------------------------------------------
@@ -215,6 +218,7 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
                         currentNames[1] = preferences.getString("moodFileName", "");
                         currentNames[2] = preferences.getString("pebbleAccelFileName", "");
                         currentNames[3] = preferences.getString("phoneAccelFileName", "");
+                        currentNames[4] = preferences.getString("locationFileName", "");
                         Log.d(Constants.TAG, "File names:" + Arrays.toString(currentNames));
                         break;
                 }
@@ -281,7 +285,7 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
         private void uploadFile(String folder, File file) throws IOException {
             String encodedFilename = URLEncoder.encode(folder + "/" + file.getName());
             Request request = new Request.Builder()
-                .url("http://10.192.54.154:5000/upload?filename=" + encodedFilename)
+                .url("http://" + Constants.IP_SERVER +"/upload?filename=" + encodedFilename)
                 .post(RequestBody.create(MEDIA_TYPE_BINARY, file))
                 .build();
 

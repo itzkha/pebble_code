@@ -52,6 +52,7 @@ public class LoggingService extends Service {
     private BufferedOutputStream bufferOutPhoneSynced = null;
     //private BufferedOutputStream bufferOutPhone = null;
     //private BufferedOutputStream bufferOutSync = null;
+    private BufferedOutputStream bufferOutLocation = null;
     private BufferedOutputStream bufferOutLabelActivity = null;
     private BufferedOutputStream bufferOutLabelMood = null;
     private PhoneDataBuffer phoneDataBuffer;
@@ -63,6 +64,8 @@ public class LoggingService extends Service {
     private PowerManager.WakeLock wakeLock;
     private Handler synchronizationLabellingHandler;
     private Runnable runnableSynchronizationLabelling;
+    private Handler locationHandler;
+    private Runnable runnableLocation;
 
 
     private long lastPhoneTimestamp = 0;
@@ -281,9 +284,41 @@ public class LoggingService extends Service {
             }
         };
         synchronizationLabellingHandler.postDelayed(runnableSynchronizationLabelling, Constants.SYNCHRONIZATION_LABELLING_SHORT_PERIOD);         // Request first timestamp
-        //------------------------------------------------------------------------------------------
 
+        //------------------------------------------------------------------------------------------
         fusedLocationService = new FusedLocationService(getApplicationContext());
+
+        //------------------------------------------------------------------------------------------
+        locationHandler = new Handler();
+        runnableLocation = new Runnable() {
+            @Override
+            public void run() {
+                Location location = fusedLocationService.getLocation();
+                String line = String.valueOf(System.currentTimeMillis());
+                if (location != null) {
+                    line = line.concat("," + location.getLatitude()
+                            + "," + location.getLongitude()
+                            + "," + location.getAltitude()
+                            + "," + location.getAccuracy()
+                            + "," + location.getProvider()
+                            + "\n");
+                }
+                else {
+                    line = line.concat(",NA,NA,NA,NA,NA\n");
+                }
+                try {
+                    bufferOutLocation.write(line.getBytes());
+                    bufferOutLocation.flush();
+                }
+                catch (IOException ioe) {
+                    Log.d(Constants.TAG, "Error writing location.");
+                }
+
+                locationHandler.postDelayed(this, Constants.LOCATION_PERIOD);
+            }
+        };
+        locationHandler.postDelayed(runnableLocation, Constants.LOCATION_PERIOD);
+
 
         //------------------------------------------------------------------------------------------
         try {
@@ -303,13 +338,13 @@ public class LoggingService extends Service {
 
             fileName = "activity_" + deviceId + "_" + sdf.format(date) + ".csv";
             bufferOutLabelActivity = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
-            bufferOutLabelActivity.write(Constants.labelsFileHeader.getBytes());
+            bufferOutLabelActivity.write(Constants.LABELS_FILE_HEADER.getBytes());
             logLabel("No activity", Constants.ACTIVITY_LABEL_COMMAND);
             editor.putString("activityFileName", fileName);
 
             fileName = "mood_" + deviceId + "_" + sdf.format(date) + ".csv";
             bufferOutLabelMood = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
-            bufferOutLabelMood.write(Constants.labelsFileHeader.getBytes());
+            bufferOutLabelMood.write(Constants.LABELS_FILE_HEADER.getBytes());
             logLabel("Don't know", Constants.MOOD_LABEL_COMMAND);
             editor.putString("moodFileName", fileName);
 
@@ -320,6 +355,11 @@ public class LoggingService extends Service {
             fileName = "phoneAccel_" + deviceId + "_" + sdf.format(date) + ".bin";
             bufferOutPhoneSynced = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
             editor.putString("phoneAccelFileName", fileName);
+
+            fileName = "location_" + deviceId + "_" + sdf.format(date) + ".csv";
+            bufferOutLocation = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
+            bufferOutLocation.write(Constants.LOCATION_FILE_HEADER.getBytes());
+            editor.putString("locationFileName", fileName);
 
             editor.commit();
             askActivity(Constants.NEW_FILES_COMMAND);
@@ -400,6 +440,8 @@ public class LoggingService extends Service {
         //------------------------------------------------------------------------------------------ Stop alarms
         synchronizationLabellingHandler.removeCallbacks(runnableSynchronizationLabelling);
         synchronizationLabellingHandler = null;
+        locationHandler.removeCallbacks(runnableLocation);
+        locationHandler = null;
 
         //------------------------------------------------------------------------------------------ Stop acquisition receivers
         try {
@@ -473,6 +515,17 @@ public class LoggingService extends Service {
         //    Log.d(Constants.TAG, "Closing bufferOutSync... null pointer");
         //}
 
+        try {
+            bufferOutLocation.close();
+            Log.d(Constants.TAG, "File location closed...");
+        }
+        catch (IOException ioe) {
+            Log.d(Constants.TAG, "Error closing bufferOutLocation...");
+        }
+        catch (NullPointerException iae) {
+            Log.d(Constants.TAG, "Closing bufferOutLocation... null pointer");
+        }
+
         //------------------------------------------------------------------------------------------ Stop communication with the Pebble
         unregisterReceiver(pebbleAppMessageDataReceiver);
         unregisterReceiver(pebbleAppMessageAckReceiver);
@@ -491,6 +544,7 @@ public class LoggingService extends Service {
         editor.putString("moodFileName", "");
         editor.putString("pebbleAccelFileName", "");
         editor.putString("phoneAccelFileName", "");
+        editor.putString("locationFileName", "");
         editor.commit();
         askActivity(Constants.NEW_FILES_COMMAND);
 
