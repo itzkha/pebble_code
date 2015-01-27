@@ -68,12 +68,13 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
         SharedPreferences preferences = getSharedPreferences("smartdays", 0);
 
         //------------------------------------------------------------------------------------------
-        currentNames = new String[5];
+        currentNames = new String[6];
         currentNames[0] = preferences.getString("activityFileName", "");
         currentNames[1] = preferences.getString("moodFileName", "");
         currentNames[2] = preferences.getString("pebbleAccelFileName", "");
         currentNames[3] = preferences.getString("phoneAccelFileName", "");
-        currentNames[4] = preferences.getString("locationFileName", "");
+        currentNames[4] = preferences.getString("phoneAccelSyncedFileName", "");
+        currentNames[5] = preferences.getString("locationFileName", "");
         Log.d(Constants.TAG, "File names:" + Arrays.toString(currentNames));
 
         //------------------------------------------------------------------------------------------
@@ -218,7 +219,8 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
                         currentNames[1] = preferences.getString("moodFileName", "");
                         currentNames[2] = preferences.getString("pebbleAccelFileName", "");
                         currentNames[3] = preferences.getString("phoneAccelFileName", "");
-                        currentNames[4] = preferences.getString("locationFileName", "");
+                        currentNames[4] = preferences.getString("phoneAccelSyncedFileName", "");
+                        currentNames[5] = preferences.getString("locationFileName", "");
                         Log.d(Constants.TAG, "File names:" + Arrays.toString(currentNames));
                         break;
                 }

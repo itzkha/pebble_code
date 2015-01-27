@@ -50,8 +50,7 @@ public class LoggingService extends Service {
 
     private BufferedOutputStream bufferOutPebble = null;
     private BufferedOutputStream bufferOutPhoneSynced = null;
-    //private BufferedOutputStream bufferOutPhone = null;
-    //private BufferedOutputStream bufferOutSync = null;
+    private BufferedOutputStream bufferOutPhone = null;
     private BufferedOutputStream bufferOutLocation = null;
     private BufferedOutputStream bufferOutLabelActivity = null;
     private BufferedOutputStream bufferOutLabelMood = null;
@@ -125,13 +124,6 @@ public class LoggingService extends Service {
                         //Log.d(Constants.TAG, "timestampPEBBLE=" + String.valueOf(timestampPebble) + " currentTime=" + String.valueOf(currentTime) + " lastTime=" + String.valueOf(lastPhoneTimestamp) + " new offset=" + String.valueOf(offsetFromUTC));
                         Log.d(Constants.TAG, "new offset=" + String.valueOf(offsetFromUTC));
                         dataloggingReceiver.setOffset(offsetFromUTC);
-                        //if (bufferOutSync != null) {
-                        //    try {
-                        //        bufferOutSync.write(ByteBuffer.allocate(8).putLong(offsetFromUTC).array());
-                        //    }
-                        //    catch (IOException ioe) {
-                        //    }
-                        //}
                         Log.d(Constants.TAG, "counter: " + String.valueOf(timestampCounter));
                         break;
                     case Constants.SYNC_MENU_ITEM_COMMAND:
@@ -353,8 +345,13 @@ public class LoggingService extends Service {
             editor.putString("pebbleAccelFileName", fileName);
 
             fileName = "phoneAccel_" + deviceId + "_" + sdf.format(date) + ".bin";
-            bufferOutPhoneSynced = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
+            bufferOutPhone = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
             editor.putString("phoneAccelFileName", fileName);
+
+            fileName = "phoneAccelSynced_" + deviceId + "_" + sdf.format(date) + ".bin";
+            //bufferOutPhoneSynced = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
+            bufferOutPhoneSynced = null;
+            editor.putString("phoneAccelSyncedFileName", fileName);
 
             fileName = "location_" + deviceId + "_" + sdf.format(date) + ".csv";
             bufferOutLocation = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
@@ -364,7 +361,8 @@ public class LoggingService extends Service {
             editor.commit();
             askActivity(Constants.NEW_FILES_COMMAND);
 
-            phoneDataBuffer = new PhoneDataBuffer(Constants.BUFFER_SIZE);
+            //phoneDataBuffer = new PhoneDataBuffer(Constants.BUFFER_SIZE);
+            phoneDataBuffer = null;
 
             Log.d(Constants.TAG, "Files created...");
 
@@ -406,9 +404,11 @@ public class LoggingService extends Service {
             Notification notification = showNotification();
             startForeground(NOTIFICATION, notification);
 
-            dataloggingReceiver = new SmartDaysPebbleDataLogReceiver(Constants.WATCHAPP_UUID, bufferOutPebble, bufferOutPhoneSynced, phoneDataBuffer);
-            //phoneSensorEventListener = new PhoneSensorEventListener(phoneDataBuffer, bufferOutPhone);
-            phoneSensorEventListener = new PhoneSensorEventListener(phoneDataBuffer);
+//            dataloggingReceiver = new SmartDaysPebbleDataLogReceiver(Constants.WATCHAPP_UUID, bufferOutPebble, bufferOutPhoneSynced, phoneDataBuffer);    //log pebble data + synced phone data
+            dataloggingReceiver = new SmartDaysPebbleDataLogReceiver(Constants.WATCHAPP_UUID, bufferOutPebble, null, null);                                 // log pebble data
+            //phoneSensorEventListener = new PhoneSensorEventListener(phoneDataBuffer, bufferOutPhone);                                                     // log raw phone data + put data in the buffer for sync
+            //phoneSensorEventListener = new PhoneSensorEventListener(phoneDataBuffer, null);                                                               // put phone data in the buffer
+            phoneSensorEventListener = new PhoneSensorEventListener(null, bufferOutPhone);                                                                  // log raw phone data (no sync)
 
             startLoggingPebble();
             startLoggingPhone();
@@ -467,6 +467,15 @@ public class LoggingService extends Service {
         }
 
         try {
+            bufferOutPhone.close();
+            Log.d(Constants.TAG, "bufferOutPhone closed...");
+        } catch (IOException ioe) {
+            Log.d(Constants.TAG, "Error closing bufferOutPhone...");
+        } catch (NullPointerException iae) {
+            Log.d(Constants.TAG, "Closing bufferOutPhone... null pointer");
+        }
+
+        try {
             bufferOutPhoneSynced.close();
             Log.d(Constants.TAG, "bufferOutPhoneSynced closed...");
         } catch (IOException ioe) {
@@ -497,24 +506,6 @@ public class LoggingService extends Service {
             Log.d(Constants.TAG, "Closing bufferOutLabelMood... null pointer");
         }
 
-        //try {
-        //    bufferOutPhone.close();
-        //    Log.d(Constants.TAG, "bufferOutPhone closed...");
-        //} catch (IOException ioe) {
-        //    Log.d(Constants.TAG, "Error closing bufferOutPhone...");
-        //} catch (NullPointerException iae) {
-        //    Log.d(Constants.TAG, "Closing bufferOutPhone... null pointer");
-        //}
-
-        //try {
-        //    bufferOutSync.close();
-        //   Log.d(Constants.TAG, "bufferOutSync closed...");
-        //} catch (IOException ioe) {
-        //    Log.d(Constants.TAG, "Error closing bufferOutSync...");
-        //} catch (NullPointerException iae) {
-        //    Log.d(Constants.TAG, "Closing bufferOutSync... null pointer");
-        //}
-
         try {
             bufferOutLocation.close();
             Log.d(Constants.TAG, "File location closed...");
@@ -544,6 +535,7 @@ public class LoggingService extends Service {
         editor.putString("moodFileName", "");
         editor.putString("pebbleAccelFileName", "");
         editor.putString("phoneAccelFileName", "");
+        editor.putString("phoneAccelSyncedFileName", "");
         editor.putString("locationFileName", "");
         editor.commit();
         askActivity(Constants.NEW_FILES_COMMAND);
