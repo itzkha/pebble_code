@@ -46,9 +46,6 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
     private ArrayList<String> activities;
     private CurrentActivityDialog currentActivityDialog;
 
-    private ActivityViewDialog activityViewDialog;
-
-    private TextView textViewCurrentActivity;
     private String[] currentNames = null;
 
     @Override
@@ -80,9 +77,6 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
         //------------------------------------------------------------------------------------------
         final TextView textViewMessage = (TextView) findViewById(R.id.textViewMessage);
         textViewMessage.setText("");
-
-        textViewCurrentActivity = (TextView) findViewById(R.id.textViewCurrentActivity);
-        textViewCurrentActivity.setText(preferences.getString("currentActivity", "No activity"));
 
         //------------------------------------------------------------------------------------------
         final Button buttonStart = (Button) findViewById(R.id.buttonStart);
@@ -166,7 +160,8 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
 
         currentActivityDialog = new CurrentActivityDialog();
         currentActivityDialog.setActivities(activities);
-        final Button buttonCurrentActivity = (Button) findViewById(R.id.buttonCurrentActivity);
+        final Button buttonCurrentActivity = (Button) findViewById(R.id.buttonChangeCurrentActivity);
+        buttonCurrentActivity.setText(preferences.getString("currentActivity", "No activity"));
         buttonCurrentActivity.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 currentActivityDialog.show(getFragmentManager(), "Current activity");
@@ -175,18 +170,6 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
 
         //------------------------------------------------------------------------------------------
 
-        activityViewDialog = new ActivityViewDialog();
-        activityViewDialog.setOptions(activities);
-        final Button buttonTest = (Button) findViewById(R.id.buttonTest);
-        buttonTest.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                activityViewDialog.show(getFragmentManager(), "Test");
-            }
-        });
-        buttonTest.setVisibility(View.INVISIBLE);
-
-
-        //------------------------------------------------------------------------------------------
         serviceMessagesHandler = new Handler() {
 		    @Override
 		    public void handleMessage(Message msg) {
@@ -211,7 +194,7 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
                         }
                         break;
                     case Constants.ACTIVITY_LABEL_COMMAND:
-                        textViewCurrentActivity.setText(msg.obj.toString());
+                        buttonCurrentActivity.setText(msg.obj.toString());
                         break;
                     case Constants.NEW_FILES_COMMAND:
                         SharedPreferences preferences = getSharedPreferences("smartdays", 0);
@@ -260,7 +243,7 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
     @Override
     public void onDialogPositiveClick(String activity) {
         if (askService(Constants.ACTIVITY_LABEL_COMMAND, activity)) {
-            textViewCurrentActivity.setText(activity);
+            ((Button)findViewById(R.id.buttonChangeCurrentActivity)).setText(activity);
         }
     }
 

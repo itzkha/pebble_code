@@ -29,9 +29,13 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.Random;
 import java.util.TimeZone;
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
  * Created by hector on 01/12/14.
@@ -78,6 +82,8 @@ public class LoggingService extends Service {
     private int moodLabelFailCounter = 0;
 
     private Random random;
+    private File appDir;
+    private Timer timer;
 
 
     public static boolean isRunning() {
@@ -103,6 +109,36 @@ public class LoggingService extends Service {
         PowerManager pm = (PowerManager) this.getSystemService(Context.POWER_SERVICE);
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, Constants.TAG);
 
+
+        TimerTask timerTask = new TimerTask() {
+            public void run() {
+                Log.d(Constants.TAG, "Stopping automatically");
+                stopAlarms();
+                stopLoggers();
+                closeFiles();
+
+                Log.d(Constants.TAG, "Starting automatically");
+                openFiles();
+                startLoggers(false);
+                startAlarms();
+            }
+        };
+        Calendar calendar = Calendar.getInstance();
+        GregorianCalendar gc = new GregorianCalendar(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DATE), 23, 59, 59);
+        timer = new Timer();
+        timer.schedule(timerTask, gc.getTime(), 24 * 60 * 60 * 1000);
+
+        //------------------------------------------------------------------------------------------
+        fusedLocationService = new FusedLocationService(getApplicationContext());
+
+        //------------------------------------------------------------------------------------------
+        //phoneDataBuffer = new PhoneDataBuffer(Constants.BUFFER_SIZE);
+        phoneDataBuffer = null;
+
+        //------------------------------------------------------------------------------------------
+        openFiles();
+
+        //------------------------------------------------------------------------------------------
         pebbleAppMessageDataReceiver = new PebbleKit.PebbleDataReceiver(Constants.WATCHAPP_UUID) {
             long currentTime;
             long timestampPebble;
@@ -249,9 +285,39 @@ public class LoggingService extends Service {
             }
         };
         PebbleKit.registerReceivedNackHandler(this, pebbleAppMessageNackReceiver);
-        //------------------------------------------------------------------------------------------
 
+        //------------------------------------------------------------------------------------------
         synchronizationLabellingHandler = new Handler();
+        locationHandler = new Handler();
+        startAlarms();
+
+        //------------------------------------------------------------------------------------------
+        serviceMessagesHandler = new Handler() {
+            @Override
+            public void handleMessage(Message msg) {
+                Log.d(Constants.TAG, String.format("Service received message: msg=%s", msg));
+
+                switch (msg.what) {
+                    case Constants.ACTIVITY_LABEL_COMMAND:
+                        logLabel(msg.obj.toString(), Constants.ACTIVITY_LABEL_COMMAND);
+                        break;
+                    case Constants.SYNC_MENU_ITEM_COMMAND:
+                        sendCommand(msg.obj.toString());
+                        break;
+                    case Constants.STOP_COMMAND:
+                        stop();
+                        break;
+                }
+                super.handleMessage(msg);
+            }
+        };
+
+        running = false;
+    }
+
+    private void startAlarms() {
+
+        //------------------------------------------------------------------------------------------
         runnableSynchronizationLabelling = new Runnable() {
             @Override
             public void run() {
@@ -278,10 +344,6 @@ public class LoggingService extends Service {
         synchronizationLabellingHandler.postDelayed(runnableSynchronizationLabelling, Constants.SYNCHRONIZATION_LABELLING_SHORT_PERIOD);         // Request first timestamp
 
         //------------------------------------------------------------------------------------------
-        fusedLocationService = new FusedLocationService(getApplicationContext());
-
-        //------------------------------------------------------------------------------------------
-        locationHandler = new Handler();
         runnableLocation = new Runnable() {
             @Override
             public void run() {
@@ -311,87 +373,17 @@ public class LoggingService extends Service {
         };
         locationHandler.postDelayed(runnableLocation, Constants.LOCATION_PERIOD);
 
+    }
 
-        //------------------------------------------------------------------------------------------
-        try {
-            File appDir = new File(Environment.getExternalStorageDirectory() + "/smartdays");
-            if (!appDir.exists()) {
-                appDir.mkdir();
-            }
+    private void startLoggers(boolean startPebble) {
+            //dataloggingReceiver = new SmartDaysPebbleDataLogReceiver(Constants.WATCHAPP_UUID, bufferOutPebble, bufferOutPhoneSynced, phoneDataBuffer);    //log pebble data + synced phone data
+            dataloggingReceiver = new SmartDaysPebbleDataLogReceiver(Constants.WATCHAPP_UUID, bufferOutPebble, null, null);                                 // log pebble data
+            //phoneSensorEventListener = new PhoneSensorEventListener(phoneDataBuffer, bufferOutPhone);                                                     // log raw phone data + put data in the buffer for sync
+            //phoneSensorEventListener = new PhoneSensorEventListener(phoneDataBuffer, null);                                                               // put phone data in the buffer
+            phoneSensorEventListener = new PhoneSensorEventListener(null, bufferOutPhone);                                                                  // log raw phone data (no sync)
 
-            // Create the files
-            String fileName;
-            Date date = new Date();
-            SharedPreferences settings = getSharedPreferences("smartdays", 0);
-            SharedPreferences.Editor editor = settings.edit();
-
-            String deviceId = Settings.Secure.getString(this.getContentResolver(), Settings.Secure.ANDROID_ID);
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
-
-            fileName = "activity_" + deviceId + "_" + sdf.format(date) + ".csv";
-            bufferOutLabelActivity = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
-            bufferOutLabelActivity.write(Constants.LABELS_FILE_HEADER.getBytes());
-            logLabel("No activity", Constants.ACTIVITY_LABEL_COMMAND);
-            editor.putString("activityFileName", fileName);
-
-            fileName = "mood_" + deviceId + "_" + sdf.format(date) + ".csv";
-            bufferOutLabelMood = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
-            bufferOutLabelMood.write(Constants.LABELS_FILE_HEADER.getBytes());
-            logLabel("Don't know", Constants.MOOD_LABEL_COMMAND);
-            editor.putString("moodFileName", fileName);
-
-            fileName = "pebbleAccel_" + deviceId + "_" + sdf.format(date) + ".bin";
-            bufferOutPebble = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
-            editor.putString("pebbleAccelFileName", fileName);
-
-            fileName = "phoneAccel_" + deviceId + "_" + sdf.format(date) + ".bin";
-            bufferOutPhone = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
-            editor.putString("phoneAccelFileName", fileName);
-
-            fileName = "phoneAccelSynced_" + deviceId + "_" + sdf.format(date) + ".bin";
-            //bufferOutPhoneSynced = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
-            bufferOutPhoneSynced = null;
-            editor.putString("phoneAccelSyncedFileName", fileName);
-
-            fileName = "location_" + deviceId + "_" + sdf.format(date) + ".csv";
-            bufferOutLocation = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
-            bufferOutLocation.write(Constants.LOCATION_FILE_HEADER.getBytes());
-            editor.putString("locationFileName", fileName);
-
-            editor.commit();
-            askActivity(Constants.NEW_FILES_COMMAND);
-
-            //phoneDataBuffer = new PhoneDataBuffer(Constants.BUFFER_SIZE);
-            phoneDataBuffer = null;
-
-            Log.d(Constants.TAG, "Files created...");
-
-        } catch (IOException ioe) {
-            Log.d(Constants.TAG, "Error creating file...");
-        }
-
-        //------------------------------------------------------------------------------------------
-        serviceMessagesHandler = new Handler() {
-            @Override
-            public void handleMessage(Message msg) {
-                Log.d(Constants.TAG, String.format("Service received message: msg=%s", msg));
-
-                switch (msg.what) {
-                    case Constants.ACTIVITY_LABEL_COMMAND:
-                        logLabel(msg.obj.toString(), Constants.ACTIVITY_LABEL_COMMAND);
-                        break;
-                    case Constants.SYNC_MENU_ITEM_COMMAND:
-                        sendCommand(msg.obj.toString());
-                        break;
-                    case Constants.STOP_COMMAND:
-                        stop();
-                        break;
-                }
-                super.handleMessage(msg);
-            }
-        };
-
-        running = false;
+            startLoggingPebble(startPebble);
+            startLoggingPhone();
     }
 
     @Override
@@ -404,14 +396,7 @@ public class LoggingService extends Service {
             Notification notification = showNotification();
             startForeground(NOTIFICATION, notification);
 
-//            dataloggingReceiver = new SmartDaysPebbleDataLogReceiver(Constants.WATCHAPP_UUID, bufferOutPebble, bufferOutPhoneSynced, phoneDataBuffer);    //log pebble data + synced phone data
-            dataloggingReceiver = new SmartDaysPebbleDataLogReceiver(Constants.WATCHAPP_UUID, bufferOutPebble, null, null);                                 // log pebble data
-            //phoneSensorEventListener = new PhoneSensorEventListener(phoneDataBuffer, bufferOutPhone);                                                     // log raw phone data + put data in the buffer for sync
-            //phoneSensorEventListener = new PhoneSensorEventListener(phoneDataBuffer, null);                                                               // put phone data in the buffer
-            phoneSensorEventListener = new PhoneSensorEventListener(null, bufferOutPhone);                                                                  // log raw phone data (no sync)
-
-            startLoggingPebble();
-            startLoggingPhone();
+            startLoggers(true);
             running = true;
 
         }
@@ -436,27 +421,73 @@ public class LoggingService extends Service {
         return null;
     }
 
-    private void freeResources() {
-        //------------------------------------------------------------------------------------------ Stop alarms
-        synchronizationLabellingHandler.removeCallbacks(runnableSynchronizationLabelling);
-        synchronizationLabellingHandler = null;
-        locationHandler.removeCallbacks(runnableLocation);
-        locationHandler = null;
-
-        //------------------------------------------------------------------------------------------ Stop acquisition receivers
+    private boolean openFiles() {
         try {
-            unregisterReceiver(dataloggingReceiver);
-            Log.d(Constants.TAG, "Unregistering receiver...");
-        } catch (NullPointerException iae) {
-            Log.d(Constants.TAG, "Ending service... null pointer");
-        } catch (IllegalArgumentException iae) {
-            Log.d(Constants.TAG, "Unregistering receiver... already unregistered");
+            appDir = new File(Environment.getExternalStorageDirectory() + "/smartdays");
+            if (!appDir.exists()) {
+                appDir.mkdir();
+            }
+
+            // Create the files
+            String fileName;
+            Date date = new Date();
+            SharedPreferences settings = getSharedPreferences("smartdays", 0);
+            SharedPreferences.Editor editor = settings.edit();
+
+            String deviceId = Settings.Secure.getString(this.getContentResolver(), Settings.Secure.ANDROID_ID);
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+            String dateString = sdf.format(date);
+
+            Log.d(Constants.TAG, "Creating activity file...");
+            fileName = "activity_" + deviceId + "_" + dateString + ".csv";
+            bufferOutLabelActivity = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName), true));
+            bufferOutLabelActivity.write(Constants.LABELS_FILE_HEADER.getBytes());
+            logLabel("No activity", Constants.ACTIVITY_LABEL_COMMAND);
+            editor.putString("activityFileName", fileName);
+
+            Log.d(Constants.TAG, "Creating mood file...");
+            fileName = "mood_" + deviceId + "_" + dateString + ".csv";
+            bufferOutLabelMood = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
+            bufferOutLabelMood.write(Constants.LABELS_FILE_HEADER.getBytes());
+            logLabel("Don't know", Constants.MOOD_LABEL_COMMAND);
+            editor.putString("moodFileName", fileName);
+
+            Log.d(Constants.TAG, "Creating pebbleAccel file...");
+            fileName = "pebbleAccel_" + deviceId + "_" + dateString + ".bin";
+            bufferOutPebble = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
+            editor.putString("pebbleAccelFileName", fileName);
+
+            Log.d(Constants.TAG, "Creating phoneAccel file...");
+            fileName = "phoneAccel_" + deviceId + "_" + dateString + ".bin";
+            bufferOutPhone = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
+            editor.putString("phoneAccelFileName", fileName);
+
+            Log.d(Constants.TAG, "Creating phoneAccelSynced file...");
+            fileName = "phoneAccelSynced_" + deviceId + "_" + dateString + ".bin";
+            //bufferOutPhoneSynced = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
+            bufferOutPhoneSynced = null;
+            editor.putString("phoneAccelSyncedFileName", fileName);
+
+            Log.d(Constants.TAG, "Creating location file...");
+            fileName = "location_" + deviceId + "_" + dateString + ".csv";
+            bufferOutLocation = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
+            bufferOutLocation.write(Constants.LOCATION_FILE_HEADER.getBytes());
+            editor.putString("locationFileName", fileName);
+
+            editor.commit();
+            askActivity(Constants.NEW_FILES_COMMAND);
+
+            Log.d(Constants.TAG, "Files created...");
+            return true;
+
         }
+        catch (IOException ioe) {
+            Log.d(Constants.TAG, "Error creating file...");
+            return false;
+        }
+    }
 
-        sensorManager.unregisterListener(phoneSensorEventListener);
-        wakeLock.release();
-
-        //------------------------------------------------------------------------------------------ Close files
+    private void closeFiles() {
         try {
             bufferOutPebble.close();
             Log.d(Constants.TAG, "bufferOutPebble closed...");
@@ -516,6 +547,37 @@ public class LoggingService extends Service {
         catch (NullPointerException iae) {
             Log.d(Constants.TAG, "Closing bufferOutLocation... null pointer");
         }
+
+    }
+
+    private void stopLoggers() {
+        try {
+            unregisterReceiver(dataloggingReceiver);
+            Log.d(Constants.TAG, "Unregistering receiver...");
+        } catch (NullPointerException iae) {
+            Log.d(Constants.TAG, "Ending service... null pointer");
+        } catch (IllegalArgumentException iae) {
+            Log.d(Constants.TAG, "Unregistering receiver... already unregistered");
+        }
+
+        sensorManager.unregisterListener(phoneSensorEventListener);
+        wakeLock.release();
+    }
+
+    private void stopAlarms() {
+        synchronizationLabellingHandler.removeCallbacks(runnableSynchronizationLabelling);
+        locationHandler.removeCallbacks(runnableLocation);
+    }
+
+    private void freeResources() {
+        //------------------------------------------------------------------------------------------ Stop alarms
+        stopAlarms();
+
+        //------------------------------------------------------------------------------------------ Stop acquisition receivers
+        stopLoggers();
+
+        //------------------------------------------------------------------------------------------ Close files
+        closeFiles();
 
         //------------------------------------------------------------------------------------------ Stop communication with the Pebble
         unregisterReceiver(pebbleAppMessageDataReceiver);
@@ -578,11 +640,13 @@ public class LoggingService extends Service {
         return notification;
     }
 
-    private void startLoggingPebble() {
+    private void startLoggingPebble(boolean startPebble) {
         // Register DataLogging Receiver
         PebbleKit.registerDataLogReceiver(this, dataloggingReceiver);
 
-        sendCommand(Constants.START_COMMAND);
+        if (startPebble) {
+            sendCommand(Constants.START_COMMAND);
+        }
     }
 
     private void startLoggingPhone() {
@@ -625,18 +689,7 @@ public class LoggingService extends Service {
     private void logLabel(String label, int command) {
         try {
             String line = label.concat("," + String.valueOf(System.currentTimeMillis()));
-            Location location = fusedLocationService.getLocation();
-            if (location != null) {
-                line = line.concat("," + location.getLatitude()
-                        + "," + location.getLongitude()
-                        + "," + location.getAltitude()
-                        + "," + location.getAccuracy()
-                        + "," + location.getProvider()
-                        + "\n");
-            }
-            else {
-                line = line.concat(",NA,NA,NA,NA,NA\n");
-            }
+
             switch (command) {
                 case Constants.ACTIVITY_LABEL_COMMAND:
                     SharedPreferences settings = getSharedPreferences("smartdays", 0);
@@ -644,9 +697,13 @@ public class LoggingService extends Service {
                     editor.putString("currentActivity", label);
                     editor.commit();
 
+                    String fileName = settings.getString("activityFileName", "");
+                    bufferOutLabelActivity = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName), true));
                     bufferOutLabelActivity.write(line.getBytes());
                     bufferOutLabelActivity.flush();
+                    bufferOutLabelActivity.close();
                     break;
+
                 case Constants.MOOD_LABEL_COMMAND:
                     bufferOutLabelMood.write(line.getBytes());
                     bufferOutLabelMood.flush();
