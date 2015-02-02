@@ -1,0 +1,12 @@
+<resources>
+
+    <color name="black">#000000</color>
+    <color name="white">#FFFFFF</color>
+    <color name="turquoise">#139586</color>
+    <color name="turquoise_pressed">#33B5A6</color>
+
+    <color name="orange">#FD8008</color>
+    <color name="orange_pressed">#FFA028</color>
+    
+
+</resources>

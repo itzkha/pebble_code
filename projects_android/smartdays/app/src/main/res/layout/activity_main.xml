@@ -118,7 +118,7 @@
                 android:layout_column="1"
                 android:layout_gravity="fill_horizontal"
                 android:layout_margin="5dp"
-                android:enabled="false" />
+                android:enabled="true" />
 
         </GridLayout>
 

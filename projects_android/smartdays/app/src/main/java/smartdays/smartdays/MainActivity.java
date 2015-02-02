@@ -36,6 +36,10 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import ch.heig_vd.dailyactivities.DailyActivities;
+import ch.heig_vd.dailyactivities.model.Task;
+import ch.heig_vd.dailyactivities.model.Timeline;
+
 
 public class MainActivity extends Activity implements  CurrentActivityDialog.NoticeDialogListener {
 
@@ -43,7 +47,7 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
     private static MainActivity instance;
     public static Handler serviceMessagesHandler = null;
     private int menuItemInitIndex = 0;
-    private ArrayList<String> activities;
+    private ArrayList<Task> activities;
     private CurrentActivityDialog currentActivityDialog;
 
     private String[] currentNames = null;
@@ -82,6 +86,7 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
         final Button buttonStart = (Button) findViewById(R.id.buttonStart);
         final Button buttonStop = (Button) findViewById(R.id.buttonStop);
         final Button buttonFiles = (Button) findViewById(R.id.buttonFiles);
+        final Button buttonDailyView = (Button) findViewById(R.id.buttonDaySummary);
 
         if (LoggingService.isRunning()) {
             textViewMessage.setText("Logging started...");
@@ -146,17 +151,7 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
         });
 
         //------------------------------------------------------------------------------------------
-        activities = new ArrayList<String>(20);
-        activities.add("Breakfast");
-        activities.add("Coffee");
-        activities.add("Cook");
-        activities.add("Dinner");
-        activities.add("Lunch");
-        activities.add("No activity");
-        activities.add("Rest");
-        activities.add("Run");
-        activities.add("Walk");
-        activities.add("Work");
+        activities = Timeline.getInstance().getAvailableActivities();
 
         currentActivityDialog = new CurrentActivityDialog();
         currentActivityDialog.setActivities(activities);
@@ -164,12 +159,31 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
         buttonCurrentActivity.setText(preferences.getString("currentActivity", "No activity"));
         buttonCurrentActivity.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                currentActivityDialog.show(getFragmentManager(), "Current activity");
+                if (LoggingService.isRunning()) {
+                    currentActivityDialog.show(getFragmentManager(), "Current activity");
+                }
+                else {
+                    Toast.makeText(instance, R.string.start_service_first, Toast.LENGTH_SHORT).show();
+                }
             }
         });
 
         //------------------------------------------------------------------------------------------
 
+        buttonDailyView.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                if (LoggingService.isRunning()) {
+                    Log.d(Constants.TAG, "Launching viewer...");
+                    Intent intent = new Intent(getBaseContext(), DailyActivities.class);
+                    startActivity(intent);
+                }
+                else {
+                    Toast.makeText(instance, R.string.start_service_first, Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        //------------------------------------------------------------------------------------------
         serviceMessagesHandler = new Handler() {
 		    @Override
 		    public void handleMessage(Message msg) {
@@ -181,11 +195,11 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
                         buttonStart.setEnabled(true);
                         buttonStop.setEnabled(false);
                         showFilesControl();
-                        uploadFiles();
+                        //uploadFiles();
                         break;
                     case Constants.SYNC_MENU_ITEM_COMMAND:
                         if (menuItemInitIndex < activities.size()) {
-                            askService(Constants.SYNC_MENU_ITEM_COMMAND, activities.get(menuItemInitIndex));
+                            askService(Constants.SYNC_MENU_ITEM_COMMAND, activities.get(menuItemInitIndex).getName());
                             Log.d(Constants.TAG, "Asking to send: " + activities.get(menuItemInitIndex));
                             menuItemInitIndex++;
                         }

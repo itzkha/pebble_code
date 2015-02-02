@@ -24,17 +24,19 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
+import ch.heig_vd.dailyactivities.model.Task;
+
 /**
  * Created by hector on 08/01/15.
  */
 public class CurrentActivityDialog extends DialogFragment {
 
-    private ArrayList<String> activities;
+    private ArrayList<Task> activities;
     private ListView listView;
     private int selectedActivity;
     private ActionMode mActionMode;
 
-    public void setActivities(ArrayList<String> a) {
+    public void setActivities(ArrayList<Task> a) {
         activities = a;
     }
 
@@ -57,7 +59,7 @@ public class CurrentActivityDialog extends DialogFragment {
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
 
-        final ArrayAdapter<String> adapter = new ArrayAdapter<String>(getActivity(), R.layout.activities_list_row, R.id.text1, activities);
+        final ArrayAdapter<Task> adapter = new ArrayAdapter<Task>(getActivity(), R.layout.activities_list_row, R.id.text1, activities);
 
         final ActionMode.Callback mActionModeCallback = new ActionMode.Callback() {
             // Called when the action mode is created; startActionMode() was called
@@ -66,7 +68,7 @@ public class CurrentActivityDialog extends DialogFragment {
                 // Inflate a menu resource providing context menu items
                 MenuInflater inflater = mode.getMenuInflater();
                 inflater.inflate(R.menu.context_menu, menu);
-                mode.setTitle(adapter.getItem(selectedActivity));
+                mode.setTitle(adapter.getItem(selectedActivity).getName());
                 return true;
             }
 
@@ -80,7 +82,7 @@ public class CurrentActivityDialog extends DialogFragment {
             public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
                 switch (item.getItemId()) {
                     case R.id.menu_delete:
-                        if (adapter.getItem(selectedActivity) != "No activity") {
+                        if (adapter.getItem(selectedActivity) != Task.getDefaultTask()) {
                             //Log.d("SmartDAYS", "Delete!!!");
                             adapter.remove(adapter.getItem(selectedActivity));
                         }
@@ -124,11 +126,11 @@ public class CurrentActivityDialog extends DialogFragment {
                 String temp = newActivity.getText().toString().trim();
                 //Log.d("SmartDAYS", "You entered: " + temp);
                 if (temp.length() > 0) {
-                    adapter.add(temp);
-                    Collections.sort(activities, new Comparator<String>() {
+                    adapter.add(new Task(temp));
+                    Collections.sort(activities, new Comparator<Task>() {
                         @Override
-                        public int compare(String s1, String s2) {
-                            return s1.compareToIgnoreCase(s2);
+                        public int compare(Task s1, Task s2) {
+                            return s1.getName().compareToIgnoreCase(s2.getName());
                         }
                     });
                     newActivity.getText().clear();
@@ -145,7 +147,7 @@ public class CurrentActivityDialog extends DialogFragment {
                    @Override
                    public void onClick(DialogInterface dialog, int id) {
                        if (listView.getCheckedItemCount() > 0) {
-                           mListener.onDialogPositiveClick((String) listView.getItemAtPosition(listView.getCheckedItemPosition()));
+                           mListener.onDialogPositiveClick((String) listView.getItemAtPosition(listView.getCheckedItemPosition()).toString());
                        }
                    }
                })

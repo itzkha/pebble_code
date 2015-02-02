@@ -28,7 +28,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -37,6 +39,10 @@ import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import ch.heig_vd.dailyactivities.model.ActivityBlock;
+import ch.heig_vd.dailyactivities.model.Task;
+import ch.heig_vd.dailyactivities.model.Timeline;
+
 /**
  * Created by hector on 01/12/14.
  */
@@ -44,6 +50,7 @@ public class LoggingService extends Service {
 
     private static LoggingService instance = null;
     public static Handler serviceMessagesHandler = null;
+    private SharedPreferences settings;
 
     private NotificationManager notificationManager;
     private int NOTIFICATION = R.string.local_service_started;
@@ -58,7 +65,8 @@ public class LoggingService extends Service {
     private BufferedOutputStream bufferOutLocation = null;
     private BufferedOutputStream bufferOutLabelActivity = null;
     private BufferedOutputStream bufferOutLabelMood = null;
-    private PhoneDataBuffer phoneDataBuffer;
+    private PhoneDataBuffer phoneDataBuffer = null;
+    private Timeline activityTimeline;
 
     private SmartDaysPebbleDataLogReceiver dataloggingReceiver;
     private PebbleKit.PebbleDataReceiver pebbleAppMessageDataReceiver;
@@ -100,6 +108,7 @@ public class LoggingService extends Service {
         if (instance == null) {
             instance = this;
         }
+        settings = getSharedPreferences("smartdays", 0);
         random = new Random();
         lastPhoneTimestamp = System.currentTimeMillis();
         notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
@@ -136,6 +145,8 @@ public class LoggingService extends Service {
         phoneDataBuffer = null;
 
         //------------------------------------------------------------------------------------------
+        activityTimeline = Timeline.getInstance();
+        activityTimeline.addActivity(new ActivityBlock(new Task(Task.getDefaultTask().getName()), new Timestamp(System.currentTimeMillis()), Task.getMaxStoppingTime()));
         openFiles();
 
         //------------------------------------------------------------------------------------------
@@ -431,7 +442,6 @@ public class LoggingService extends Service {
             // Create the files
             String fileName;
             Date date = new Date();
-            SharedPreferences settings = getSharedPreferences("smartdays", 0);
             SharedPreferences.Editor editor = settings.edit();
 
             String deviceId = Settings.Secure.getString(this.getContentResolver(), Settings.Secure.ANDROID_ID);
@@ -442,7 +452,6 @@ public class LoggingService extends Service {
             fileName = "activity_" + deviceId + "_" + dateString + ".csv";
             bufferOutLabelActivity = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName), true));
             bufferOutLabelActivity.write(Constants.LABELS_FILE_HEADER.getBytes());
-            logLabel("No activity", Constants.ACTIVITY_LABEL_COMMAND);
             editor.putString("activityFileName", fileName);
 
             Log.d(Constants.TAG, "Creating mood file...");
@@ -589,6 +598,25 @@ public class LoggingService extends Service {
     }
 
     private void stop() {
+        String fileName = settings.getString("activityFileName", "");       // save the labels in the file
+        try {
+            bufferOutLabelActivity = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
+            bufferOutLabelActivity.write(Constants.LABELS_FILE_HEADER.getBytes());
+
+            ArrayList<ActivityBlock> activities = Timeline.getInstance().getActivities();
+            for (ActivityBlock block : activities) {
+                bufferOutLabelActivity.write(block.getTask().getName().getBytes());
+                bufferOutLabelActivity.write(",".getBytes());
+                bufferOutLabelActivity.write(String.valueOf(block.getBegin().getTime()).getBytes());
+                bufferOutLabelActivity.write("\n".getBytes());
+            }
+            bufferOutLabelActivity.flush();
+            bufferOutLabelActivity.close();
+        }
+        catch (IOException ioe) {
+        }
+
+
         freeResources();
 
         SharedPreferences settings = getSharedPreferences("smartdays", 0);
@@ -688,20 +716,22 @@ public class LoggingService extends Service {
 
     private void logLabel(String label, int command) {
         try {
-            String line = label.concat("," + String.valueOf(System.currentTimeMillis()));
+            long timestamp = System.currentTimeMillis();
+            String line = label.concat("," + timestamp);
 
             switch (command) {
                 case Constants.ACTIVITY_LABEL_COMMAND:
-                    SharedPreferences settings = getSharedPreferences("smartdays", 0);
                     SharedPreferences.Editor editor = settings.edit();
                     editor.putString("currentActivity", label);
                     editor.commit();
-
+/*
                     String fileName = settings.getString("activityFileName", "");
                     bufferOutLabelActivity = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName), true));
                     bufferOutLabelActivity.write(line.getBytes());
                     bufferOutLabelActivity.flush();
                     bufferOutLabelActivity.close();
+*/
+                    activityTimeline.addActivity(new ActivityBlock(new Task(label), new Timestamp(timestamp)));
                     break;
 
                 case Constants.MOOD_LABEL_COMMAND:

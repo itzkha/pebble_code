@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- the theme applied to the application or activity -->
+    <style name="PrimaryTheme"
+        parent="Theme.AppCompat.Light.DarkActionBar">
+        <item name="android:actionBarStyle">@style/MyActionBar</item>
+        <item name="android:actionModeBackground">@color/turquoise</item>
+
+        <!-- Support library compatibility -->
+        <item name="actionBarStyle">@style/MyActionBar</item>
+    </style>
+
+    <!-- ActionBar styles -->
+    <style name="MyActionBar"
+        parent="@style/Widget.AppCompat.Light.ActionBar.Solid.Inverse">
+        <item name="background">@color/orange</item>
+        <item name="android:background">@color/orange</item>
+    </style>
+
+    <style name="SecondaryTheme"
+        parent="Theme.AppCompat.Light.DarkActionBar">
+        <item name="android:actionBarStyle">@style/MyActionBar2</item>
+        <!-- Support library compatibility -->
+        <item name="actionBarStyle">@style/MyActionBar2</item>
+    </style>
+
+
+    <style name="MyActionBar2"
+        parent="@style/Widget.AppCompat.Light.ActionBar.Solid.Inverse">
+        <item name="background">@color/turquoise</item>
+        <item name="android:background">@color/turquoise</item>
+    </style>
+</resources>
