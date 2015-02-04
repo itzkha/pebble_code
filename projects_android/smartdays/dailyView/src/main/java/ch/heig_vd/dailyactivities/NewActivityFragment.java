@@ -88,7 +88,7 @@ public class NewActivityFragment extends Fragment {
                         timePickerListener,
                         activityBlock.getStartHour(),
                         activityBlock.getStartMinute(),
-                        false);
+                        true);
                 tpd.show();
             }
         });
@@ -101,7 +101,7 @@ public class NewActivityFragment extends Fragment {
                         timePickerListener,
                         activityBlock.getEndHour(),
                         activityBlock.getEndMinute(),
-                        false);
+                        true);
                 tpd.show();
             }
         });

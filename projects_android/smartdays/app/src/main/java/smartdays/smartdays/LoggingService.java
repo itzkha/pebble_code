@@ -634,6 +634,8 @@ public class LoggingService extends Service {
         editor.commit();
         askActivity("No activity");
 
+        Timeline.getInstance().removeAllActivities();
+
         askActivity(Constants.SERVICE_STOPPED);
 
         // Then stop

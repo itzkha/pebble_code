@@ -31,12 +31,14 @@ import com.squareup.okhttp.Response;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.net.ConnectException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 
 import ch.heig_vd.dailyactivities.DailyActivities;
+import ch.heig_vd.dailyactivities.model.ActivityBlock;
 import ch.heig_vd.dailyactivities.model.Task;
 import ch.heig_vd.dailyactivities.model.Timeline;
 
@@ -156,7 +158,8 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
         currentActivityDialog = new CurrentActivityDialog();
         currentActivityDialog.setActivities(activities);
         final Button buttonCurrentActivity = (Button) findViewById(R.id.buttonChangeCurrentActivity);
-        buttonCurrentActivity.setText(preferences.getString("currentActivity", "No activity"));
+        buttonCurrentActivity.setText(computeCurrentActivity());
+        //buttonCurrentActivity.setText(preferences.getString("currentActivity", "No activity"));
         buttonCurrentActivity.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 if (LoggingService.isRunning()) {
@@ -195,7 +198,7 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
                         buttonStart.setEnabled(true);
                         buttonStop.setEnabled(false);
                         showFilesControl();
-                        //uploadFiles();
+                        uploadFiles();
                         break;
                     case Constants.SYNC_MENU_ITEM_COMMAND:
                         if (menuItemInitIndex < activities.size()) {
@@ -228,6 +231,20 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
 
         //------------------------------------------------------------------------------------------
         Log.d(Constants.TAG, "Ready...");
+    }
+
+    @Override
+    protected void onResume() {
+        ((Button) findViewById(R.id.buttonChangeCurrentActivity)).setText(computeCurrentActivity());
+
+        super.onResume();
+    }
+
+    @Override
+    protected void onRestart() {
+        ((Button) findViewById(R.id.buttonChangeCurrentActivity)).setText(computeCurrentActivity());
+
+        super.onRestart();
     }
 
     private boolean isGooglePlayServicesAvailable() {
@@ -350,7 +367,7 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
         }
     }
 
-    public boolean uploadableFiles() {
+    private boolean uploadableFiles() {
         File appDir = new File(Environment.getExternalStorageDirectory() + "/smartdays");
         if (appDir.exists()) {
             File files[] = appDir.listFiles();
@@ -370,7 +387,7 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
         return false;
     }
 
-    public void showFilesControl() {
+    private void showFilesControl() {
         if (uploadableFiles()) {
             ((Button)findViewById(R.id.buttonFiles)).setVisibility(View.VISIBLE);
             ((ProgressBar) findViewById(R.id.progressBarFiles)).setVisibility(View.VISIBLE);
@@ -383,5 +400,16 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
             ((TextView) findViewById(R.id.textViewFiles)).setVisibility(View.INVISIBLE);
             ((Button)findViewById(R.id.buttonFiles)).setEnabled(false);
         }
+    }
+
+    private String computeCurrentActivity() {
+        long currentTime = System.currentTimeMillis();
+
+        for (ActivityBlock block : Timeline.getInstance().getActivities()) {
+            if ( (currentTime >= block.getBegin().getTime()) && (currentTime <= block.getEnd().getTime()) ) {
+                return block.getTask().getName();
+            }
+        }
+        return Task.getDefaultTask().getName();
     }
 }

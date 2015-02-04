@@ -27,6 +27,7 @@ public class DailyActivities extends ActionBarActivity implements ActionMode.Cal
                     .add(R.id.container, new DailyActivitiesFragment())
                     .commit();
         }
+        getActionBar().setDisplayHomeAsUpEnabled(true);
         Timeline.getInstance().subscribe(this);
     }
 

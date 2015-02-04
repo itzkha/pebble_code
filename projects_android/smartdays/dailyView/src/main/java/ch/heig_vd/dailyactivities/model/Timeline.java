@@ -29,7 +29,7 @@ public class Timeline extends Observable {
         availableActivities.add(new Task("Lunch"));
         availableActivities.add(new Task("No activity"));
         availableActivities.add(new Task("Rest"));
-        availableActivities.add(new Task("Run"));
+        availableActivities.add(new Task("Sports"));
         availableActivities.add(new Task("Walk"));
         availableActivities.add(new Task("Work"));
         //TODO read file
@@ -101,6 +101,19 @@ public class Timeline extends Observable {
             activity.setSelected(false);
             ensureListStability();
             Log.d("Timeline", toString());
+        }
+    }
+
+    public synchronized void removeAllActivities() {
+        int i = 0;
+        while (i < activities.size()) {
+            if (activities.get(i).getTask().isDefaultTask()) {
+                i++;
+            }
+            else {
+                this.removeActivity(i);
+                i = 0;
+            }
         }
     }
 
