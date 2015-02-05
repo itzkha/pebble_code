@@ -23,9 +23,12 @@ public class Timeline extends Observable {
 
         availableActivities = new ArrayList<Task>(20);
         availableActivities.add(new Task("Breakfast"));
+        availableActivities.add(new Task("Car"));
+        availableActivities.add(new Task("Clean"));
         availableActivities.add(new Task("Coffee"));
         availableActivities.add(new Task("Cook"));
         availableActivities.add(new Task("Dinner"));
+        availableActivities.add(new Task("Hygiene"));
         availableActivities.add(new Task("Lunch"));
         availableActivities.add(new Task("No activity"));
         availableActivities.add(new Task("Rest"));
