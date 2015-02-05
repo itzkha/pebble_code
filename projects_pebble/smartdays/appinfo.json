@@ -15,18 +15,33 @@
     "media": [    
       {
         "type": "png",
-        "name": "SMILE",
-        "file": "smile-32x32.png"
+        "name": "ANGRY",
+        "file": "angry_32x32.png"
+      },
+      {
+        "type": "png",
+        "name": "ANXIOUS",
+        "file": "anxious_32x32.png"
+      },
+      {
+        "type": "png",
+        "name": "HAPPY",
+        "file": "happy_32x32.png"
       },
       {
         "type": "png",
         "name": "SAD",
-        "file": "sad-32x32.png"
+        "file": "sad_32x32.png"
       },
       {
         "type": "png",
-        "name": "NEUTRAL",
-        "file": "neutral-32x32.png"
+        "name": "STRESSED",
+        "file": "stressed_32x32.png"
+      },
+      {
+        "type": "png",
+        "name": "TIRED",
+        "file": "tired_32x32.png"
       }
     ]
   }

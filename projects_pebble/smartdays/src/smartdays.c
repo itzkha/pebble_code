@@ -44,8 +44,8 @@ static bool empty_menu = true;
 
 static Window *s_mood_window;
 static MenuLayer *s_menu_mood_layer;
-static char* menu_mood_items[3] = {"Positive", "Don't know", "Negative"};
-static GBitmap *mood_icons[3];
+static char* menu_mood_items[6] = {"Angry", "Anxious", "Happy", "Sad", "Stressed", "Tired"};
+static GBitmap *mood_icons[6];
 
 static const uint32_t const segments[] = { 50, 200, 50 };
 VibePattern pat = {
@@ -277,7 +277,7 @@ static uint16_t menu_mood_get_num_sections_callback(MenuLayer *menu_layer, void 
 // Each section has a number of items;  we use a callback to specify this
 // You can also dynamically add and remove items using this
 static uint16_t menu_mood_get_num_rows_callback(MenuLayer *menu_layer, uint16_t section_index, void *data) {
-  return 3;
+  return 6;
 }
 
 // A callback is used to specify the height of the section header
@@ -545,9 +545,12 @@ static void mood_window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   GRect window_bounds = layer_get_bounds(window_layer);
   
-  mood_icons[0] = gbitmap_create_with_resource(RESOURCE_ID_SMILE);
-  mood_icons[1] = gbitmap_create_with_resource(RESOURCE_ID_NEUTRAL);
-  mood_icons[2] = gbitmap_create_with_resource(RESOURCE_ID_SAD);
+  mood_icons[0] = gbitmap_create_with_resource(RESOURCE_ID_ANGRY);
+  mood_icons[1] = gbitmap_create_with_resource(RESOURCE_ID_ANXIOUS);
+  mood_icons[2] = gbitmap_create_with_resource(RESOURCE_ID_HAPPY);
+  mood_icons[3] = gbitmap_create_with_resource(RESOURCE_ID_SAD);
+  mood_icons[4] = gbitmap_create_with_resource(RESOURCE_ID_STRESSED);
+  mood_icons[5] = gbitmap_create_with_resource(RESOURCE_ID_TIRED);
 
   // Create MenuLayer
   s_menu_mood_layer = menu_layer_create(GRect(0, 0, window_bounds.size.w, window_bounds.size.h));
@@ -571,6 +574,9 @@ static void mood_window_unload(Window *window) {
   gbitmap_destroy(mood_icons[0]);
   gbitmap_destroy(mood_icons[1]);
   gbitmap_destroy(mood_icons[2]);
+  gbitmap_destroy(mood_icons[3]);
+  gbitmap_destroy(mood_icons[4]);
+  gbitmap_destroy(mood_icons[5]);
 
   menu_layer_destroy(s_menu_mood_layer);
 }
