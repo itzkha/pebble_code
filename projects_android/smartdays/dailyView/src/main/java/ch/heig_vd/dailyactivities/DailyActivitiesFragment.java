@@ -27,6 +27,7 @@ public class DailyActivitiesFragment extends Fragment {
 
     private DailyActivities parent;
     private Button addActivity;
+    private ActivityAdapter mActivitiesAdapter;
 
     public DailyActivitiesFragment() {
     }
@@ -44,8 +45,7 @@ public class DailyActivitiesFragment extends Fragment {
 
         ArrayList<ActivityBlock> sample = Timeline.getInstance().getActivities();
 
-        final ActivityAdapter mActivitiesAdapter = new ActivityAdapter(getActivity(),
-                R.layout.list_item_activity, sample);
+        mActivitiesAdapter = new ActivityAdapter(getActivity(), R.layout.list_item_activity, sample);
 
         // Get a reference to the ListView, and attach this adapter to it.
         ListView listActivities;listActivities = (ListView) rootView.findViewById(R.id.list_activities);
@@ -90,6 +90,12 @@ public class DailyActivitiesFragment extends Fragment {
         });
 
         return rootView;
+    }
+
+    @Override
+    public void onResume() {
+        mActivitiesAdapter.notifyDataSetChanged();
+        super.onResume();
     }
 
     class ActivityAdapter extends ArrayAdapter<ActivityBlock> implements Observer {

@@ -220,8 +220,8 @@ public class NewActivityFragment extends Fragment {
     }
 
     private void navigateBack() {
-        Intent intent = new Intent(getActivity(), DailyActivities.class);
-        startActivity(intent);
+        //Intent intent = new Intent(getActivity(), DailyActivities.class);
+        //startActivity(intent);
         getActivity().finish();
     }
 }
