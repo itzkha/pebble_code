@@ -94,7 +94,7 @@ public class DailyActivitiesFragment extends Fragment {
 
     @Override
     public void onResume() {
-        mActivitiesAdapter.notifyDataSetChanged();
+        mActivitiesAdapter.update();
         super.onResume();
     }
 
@@ -121,9 +121,13 @@ public class DailyActivitiesFragment extends Fragment {
                 if(!parent.isEditModeOn()) {
                     addActivity.setVisibility(View.VISIBLE);
                 }
-                activities = Timeline.getInstance().getActivities();
-                notifyDataSetChanged();
+                update();
             }
+        }
+
+        public void update() {
+            activities = Timeline.getInstance().getActivities();
+            notifyDataSetChanged();
         }
 
         @Override
