@@ -16,32 +16,52 @@
       {
         "type": "png",
         "name": "ANGRY",
-        "file": "angry_32x32.png"
+        "file": "angry_pulse_32x32.png"
       },
       {
         "type": "png",
         "name": "ANXIOUS",
-        "file": "anxious_32x32.png"
+        "file": "anxious_pulse_32x32.png"
+      },
+      {
+        "type": "png",
+        "name": "CONTENT",
+        "file": "content_pulse_32x32.png"
+      },
+      {
+        "type": "png",
+        "name": "DEPRESSED",
+        "file": "depressed_pulse_32x32.png"
       },
       {
         "type": "png",
         "name": "HAPPY",
-        "file": "happy_32x32.png"
+        "file": "happy_pulse_32x32.png"
+      },
+      {
+        "type": "png",
+        "name": "JUST_OK",
+        "file": "justOK_pulse_32x32.png"
+      },
+      {
+        "type": "png",
+        "name": "MOTIVATED",
+        "file": "motivated_pulse_32x32.png"
       },
       {
         "type": "png",
         "name": "SAD",
-        "file": "sad_32x32.png"
+        "file": "sad_pulse_32x32.png"
       },
       {
         "type": "png",
         "name": "STRESSED",
-        "file": "stressed_32x32.png"
+        "file": "stressed_pulse_32x32.png"
       },
       {
         "type": "png",
         "name": "TIRED",
-        "file": "tired_32x32.png"
+        "file": "tired_pulse_32x32.png"
       }
     ]
   }
