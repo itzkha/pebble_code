@@ -15,6 +15,7 @@
     <string name="activity_name">Activity Name</string>
     <string name="txt_default_time">00:00</string>
     <string name="summary">Activities Summary</string>
+    <string name="newActivity">New Activity</string>
     <string name="action_delete">Delete</string>
 
 </resources>
