@@ -1,5 +1,6 @@
 package ch.heig_vd.dailyactivities;
 
+import android.app.ActionBar;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -8,6 +9,7 @@ import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -169,7 +171,9 @@ public class DailyActivitiesFragment extends Fragment {
                 height = convertView.getMinimumHeight();
             if(currentBlock.getTask().equals(Task.getDefaultTask()))
                 height = convertView.getMinimumHeight();
-            convertView.setLayoutParams(new ViewGroup.LayoutParams(convertView.getLayoutParams().width, height));
+            convertView.getLayoutParams().height = height;
+            convertView.requestLayout();
+            //convertView.setLayoutParams(new ViewGroup.LayoutParams(convertView.getLayoutParams().width, height));
 
             if(currentBlock.isSelected()) {
                 convertView.setBackgroundColor(getResources().getColor(android.R.color.holo_blue_light));
