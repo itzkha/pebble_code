@@ -145,7 +145,9 @@ public class LoggingService extends Service {
 
         //------------------------------------------------------------------------------------------
         activityTimeline = Timeline.getInstance();
-        activityTimeline.addActivity(new ActivityBlock(new Task(Task.getDefaultTask().getName()), new Timestamp(System.currentTimeMillis()), Task.getMaxStoppingTime()));
+        ActivityBlock defaultBlock = new ActivityBlock(new Task(Task.getDefaultTask().getName()), new Timestamp(System.currentTimeMillis()), Task.getMaxStoppingTime());
+        defaultBlock.setUndefinedEnd(true);
+        activityTimeline.addActivity(defaultBlock);
         openFiles();
 
         //------------------------------------------------------------------------------------------
@@ -705,7 +707,17 @@ public class LoggingService extends Service {
                     bufferOutLabelActivity.flush();
                     bufferOutLabelActivity.close();
 */
-                    activityTimeline.addActivity(new ActivityBlock(new Task(label), new Timestamp(timestamp)));
+                    Timestamp now = new Timestamp(timestamp);
+                    Timestamp end = null;
+                    for (ActivityBlock block : activityTimeline.getActivities()) {                  // find the end of this label
+                        if ( (now.compareTo(block.getBegin()) >= 0)  && (now.compareTo(block.getEnd()) <= 0) ) {
+                            end = new Timestamp(block.getEnd().getTime());
+                            break;
+                        }
+                    }
+                    ActivityBlock newBlock = new ActivityBlock(new Task(label), now, end);
+                    newBlock.setUndefinedEnd(true);
+                    activityTimeline.addActivity(newBlock);
                     break;
 
                 case Constants.MOOD_LABEL_COMMAND:

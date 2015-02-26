@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.text.format.Time;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,6 +19,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Observable;
 import java.util.Observer;
 
@@ -140,6 +142,8 @@ public class DailyActivitiesFragment extends Fragment {
         @Override
         public View getView(int position, View convertView, ViewGroup group) {
             ViewHolder holder;
+            long currentTime = Calendar.getInstance().getTimeInMillis();
+
             if(convertView==null){
                 holder=new ViewHolder();
                 inflater = ((Activity) context).getLayoutInflater();
@@ -158,7 +162,12 @@ public class DailyActivitiesFragment extends Fragment {
 
             holder.task.setText(currentBlock.getTask().getName());
             holder.begin.setText(currentBlock.getBeginningString());
-            holder.end.setText(currentBlock.getEndingString());
+            if ( (currentBlock.getBegin().getTime() < currentTime) && (currentBlock.getEnd().getTime() > currentTime) ) {
+                holder.end.setText("Ongoing...");
+            }
+            else {
+                holder.end.setText(currentBlock.getEndingString());
+            }
 
             if(!parent.isEditModeOn()) {
                 holder.img.setVisibility(View.VISIBLE);

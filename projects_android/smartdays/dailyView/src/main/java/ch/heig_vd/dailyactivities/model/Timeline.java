@@ -63,24 +63,39 @@ public class Timeline extends Observable {
         }
 
         ListIterator<ActivityBlock> iterator = activities.listIterator();
-        while(iterator.hasNext()) {
+        while (iterator.hasNext()) {
             ActivityBlock oldActivity = iterator.next();
-            if(newActivity.getBegin().compareTo(oldActivity.getBegin()) >= 0 && newActivity.getEnd().compareTo(oldActivity.getEnd()) <= 0) {
+            if (newActivity.getBegin().compareTo(oldActivity.getBegin()) >= 0 && newActivity.getEnd().compareTo(oldActivity.getEnd()) <= 0) {
                 Log.d("Timeline", "Is inside activity " + oldActivity);
-                Timestamp old = oldActivity.getEnd();
+                Timestamp oldEnd = oldActivity.getEnd();
                 oldActivity.setEnd(newActivity.getBegin());
                 iterator.add(newActivity);
-                iterator.add(new ActivityBlock(oldActivity.getTask(), newActivity.getEnd(), old));
-            } else if(newActivity.getBegin().compareTo(oldActivity.getBegin()) <= 0 && newActivity.getEnd().compareTo(oldActivity.getEnd()) >= 0) {
+
+                ActivityBlock activityTail;
+                if (oldActivity.isUndefinedEnd()) {
+                    activityTail = new ActivityBlock(Task.getDefaultTask(), newActivity.getEnd(), oldEnd);
+                    activityTail.setUndefinedEnd(true);
+                }
+                else {
+                    activityTail = new ActivityBlock(oldActivity.getTask(), newActivity.getEnd(), oldEnd);
+                    activityTail.setUndefinedEnd(false);
+                }
+                iterator.add(activityTail);
+
+                oldActivity.setUndefinedEnd(false);
+            }
+            else if (newActivity.getBegin().compareTo(oldActivity.getBegin()) <= 0 && newActivity.getEnd().compareTo(oldActivity.getEnd()) >= 0) {
                 Log.d("Timeline", "Contains activity " + oldActivity);
                 oldActivity.setEnd(oldActivity.getBegin());
-            } else {
-                if(newActivity.getBegin().compareTo(oldActivity.getBegin()) >= 0 && newActivity.getBegin().compareTo(oldActivity.getEnd()) <= 0) {
+            }
+            else {
+                if (newActivity.getBegin().compareTo(oldActivity.getBegin()) >= 0 && newActivity.getBegin().compareTo(oldActivity.getEnd()) <= 0) {
                     Log.d("Timeline", "Start is inside of activity " + oldActivity);
                     oldActivity.setEnd(newActivity.getBegin());
+                    oldActivity.setUndefinedEnd(false);
                     iterator.add(newActivity);
                 }
-                if(newActivity.getEnd().compareTo(oldActivity.getBegin()) >= 0 && newActivity.getEnd().compareTo(oldActivity.getEnd()) <= 0) {
+                if (newActivity.getEnd().compareTo(oldActivity.getBegin()) >= 0 && newActivity.getEnd().compareTo(oldActivity.getEnd()) <= 0) {
                     Log.d("Timeline", "End is inside of activity " + oldActivity);
                     oldActivity.setBegin(newActivity.getEnd());
                 }

@@ -7,6 +7,7 @@ public class ActivityBlock {
     private Timestamp begin;
     private Timestamp end;
     private boolean selected = false;
+    private boolean undefinedEnd = false;
 
     /**
      * Creates a new activity block from an activity name and the corresponding Timestamps values
@@ -19,18 +20,6 @@ public class ActivityBlock {
         this.activity = activity;
         setBegin(begin);
         setEnd(end);
-    }
-
-    /**
-     * Creates a new activity block from an activity name and the corresponding Timestamps values
-     * of starting and ending time of the activity.
-     * @param activity The activity name
-     * @param begin The starting time timestamp of the activity
-     */
-    public ActivityBlock(Task activity, Timestamp begin) {
-        this.activity = activity;
-        setBegin(begin);
-        end = null;
     }
 
     /**
@@ -312,8 +301,16 @@ public class ActivityBlock {
     protected void setSelected(boolean selected) {
         this.selected = selected;
     }
+
     public boolean isSelected() {
         return selected;
     }
 
+    public void setUndefinedEnd(boolean end) {
+        undefinedEnd = end;
+    }
+
+    public boolean isUndefinedEnd() {
+        return undefinedEnd;
+    }
 }

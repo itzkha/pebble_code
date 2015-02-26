@@ -33,7 +33,6 @@ public class CurrentActivityDialog extends DialogFragment {
 
     private ArrayList<Task> activities;
     private ListView listView;
-    private int selectedActivity;
 
     public void setActivities(ArrayList<Task> a) {
         activities = a;
