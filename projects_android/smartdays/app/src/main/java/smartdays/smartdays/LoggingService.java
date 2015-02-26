@@ -85,7 +85,6 @@ public class LoggingService extends Service {
     private int stopFailCounter = 0;
     private int timestampFailCounter = 0;
     private int timestampCounter = 0;
-    private int syncMenuFailCounter = 0;
     private int activityLabelFailCounter = 0;
     private int moodLabelFailCounter = 0;
 
@@ -173,10 +172,6 @@ public class LoggingService extends Service {
                         dataloggingReceiver.setOffset(offsetFromUTC);
                         Log.d(Constants.TAG, "counter: " + String.valueOf(timestampCounter));
                         break;
-                    case Constants.SYNC_MENU_ITEM_COMMAND:
-                        Log.d(Constants.TAG, "Receiving request for label items");
-                        askActivity(Constants.SYNC_MENU_ITEM_COMMAND);
-                        break;
                     case Constants.ACTIVITY_LABEL_COMMAND:
                         label = data.getString(Constants.LABEL_KEY);
                         Log.d(Constants.TAG, "Received activity label: " + label);
@@ -209,10 +204,6 @@ public class LoggingService extends Service {
                         break;
                     case Constants.TIMESTAMP_COMMAND:
                         timestampFailCounter = 0;
-                        break;
-                    case Constants.SYNC_MENU_ITEM_COMMAND:
-                        syncMenuFailCounter = 0;
-                        askActivity(Constants.SYNC_MENU_ITEM_COMMAND);
                         break;
                     case Constants.ACTIVITY_LABEL_COMMAND:
                         activityLabelFailCounter = 0;
@@ -262,16 +253,6 @@ public class LoggingService extends Service {
                             Toast.makeText(instance, R.string.pebble_not_responding, Toast.LENGTH_SHORT).show();
                         }
                         break;
-                    case Constants.SYNC_MENU_ITEM_COMMAND:
-                        syncMenuFailCounter++;
-                        if (syncMenuFailCounter < Constants.MAX_FAILS) {
-                            askActivity(Constants.SYNC_MENU_ITEM_COMMAND);
-                        }
-                        else {
-                            // Tell the user the Pebble is not responding
-                            Toast.makeText(instance, R.string.pebble_not_responding, Toast.LENGTH_SHORT).show();
-                        }
-                        break;
                     case Constants.ACTIVITY_LABEL_COMMAND:
                         activityLabelFailCounter++;
                         if (activityLabelFailCounter < Constants.MAX_FAILS) {
@@ -312,9 +293,6 @@ public class LoggingService extends Service {
                     case Constants.ACTIVITY_LABEL_COMMAND:
                         logLabel(msg.obj.toString(), Constants.ACTIVITY_LABEL_COMMAND);
                         break;
-                    case Constants.SYNC_MENU_ITEM_COMMAND:
-                        sendCommand(msg.obj.toString());
-                        break;
                     case Constants.STOP_COMMAND:
                         stop();
                         break;
@@ -342,11 +320,12 @@ public class LoggingService extends Service {
                 }
                 else {
                     timestampCounter = 0;
-                    if (random.nextFloat() > Constants.MOOD_ACTIVITY_RATIO) {
-                        sendCommand(Constants.ACTIVITY_LABEL_COMMAND);                              // ask for labels (activity)
-                    }
-                    else {
+                    float randomValue = random.nextFloat();
+                    if (randomValue < Constants.MOOD_RATIO) {                                       // smaller first
                         sendCommand(Constants.MOOD_LABEL_COMMAND);                                  // ask for labels (mood)
+                    }
+                    else if (randomValue < Constants.ACTIVITY_RATIO) {
+                        sendCommand(Constants.ACTIVITY_LABEL_COMMAND);                              // ask for labels (activity)
                     }
                     synchronizationLabellingHandler.postDelayed(this, Constants.SYNCHRONIZATION_LABELLING_LONG_PERIOD);
                 }
@@ -690,13 +669,6 @@ public class LoggingService extends Service {
         data.addUint8(Constants.COMMAND_KEY, (byte) command);
         lastPhoneTimestamp = System.currentTimeMillis();
         PebbleKit.sendDataToPebbleWithTransactionId(getApplicationContext(), Constants.WATCHAPP_UUID, data, command);
-    }
-
-    private void sendCommand(String item) {
-        Log.d(Constants.TAG, "Sending command: " + String.valueOf(Constants.SYNC_MENU_ITEM_COMMAND) + " menuItem: " + item);
-        PebbleDictionary data = new PebbleDictionary();
-        data.addString(Constants.MENU_ITEM_KEY, item);
-        PebbleKit.sendDataToPebbleWithTransactionId(getApplicationContext(), Constants.WATCHAPP_UUID, data, Constants.SYNC_MENU_ITEM_COMMAND);
     }
 
     private void askActivity(int command) {

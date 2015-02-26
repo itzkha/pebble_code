@@ -7,7 +7,6 @@
 
 #define TIMESTAMP_KEY 0xdeadbeef
 #define LABEL_KEY 0xf00d50da
-#define MENU_ITEM_KEY 0xc0cac01a
 
 #define COMMAND_KEY 0xcafebabe
 #define START_COMMAND 5
@@ -17,8 +16,9 @@
 #define ACTIVITY_LABEL_COMMAND 21
 #define MOOD_LABEL_COMMAND 28
 
-#define MAX_MENU_ITEMS 20
+#define MAX_MENU_ITEMS_ACTIVITY 10
 #define MAX_MENU_ITEM_LENGTH 15
+#define MAX_MENU_ITEMS_MOOD 8
 
 #define N_PROGRESS_SYMBOLS 4
 #define PROGRESS_KEY 10
@@ -38,16 +38,16 @@ static MenuLayer *s_menu_layer;
 
 static Window *s_activity_window;
 static MenuLayer *s_menu_activity_layer;
-static char* menu_activity_items[MAX_MENU_ITEMS];
-static uint8_t menu_items_counter = 0;
-static bool empty_menu = true;
+static char* menu_activity_items[MAX_MENU_ITEMS_ACTIVITY] = {"Relax", "Food", "Shopping", "Sports", "Work", "Commuting", "Sleeping", "School", "Household", "No activity"};
+static char* menu_activity_subs[MAX_MENU_ITEMS_ACTIVITY] = {"Socializing/Leisure", "Eating/Drinking", NULL, "Exercise/Recreation", NULL, "Car/Train", NULL, NULL, NULL, NULL};
+static uint8_t menu_activity_height[MAX_MENU_ITEMS_ACTIVITY] = {60, 60, 30, 60, 30, 60, 30, 30, 30, 30};
 
 static Window *s_mood_window;
 static MenuLayer *s_menu_mood_layer;
-static char* menu_mood_items[10] = {"Angry", "Anxious", "Content", "Depressed", "Happy", "Just OK", "Motivated", "Sad", "Stressed", "Tired"};
-static GBitmap *mood_icons[10];
+static char* menu_mood_items[MAX_MENU_ITEMS_MOOD] = {"Bored", "Calm", "Excited", "Happy", "Relaxed", "Stressed", "Tense", "Upset"};
+static GBitmap *mood_icons[MAX_MENU_ITEMS_MOOD];
 
-static const uint32_t const segments[] = { 50, 200, 50 };
+static const uint32_t const segments[] = { 100, 200, 100 };
 VibePattern pat = {
   .durations = segments,
   .num_segments = ARRAY_LENGTH(segments),
@@ -142,13 +142,6 @@ static void stop_worker() {
   }
 }
 
-//------------------------------------------------------------------------------------------------- Menu functions
-static void append_to_menu(char* item) {
-  strncpy(menu_activity_items[menu_items_counter % MAX_MENU_ITEMS], item, MAX_MENU_ITEM_LENGTH);
-  menu_items_counter++;
-  menu_layer_reload_data(s_menu_activity_layer);
-  empty_menu = false;
-}
 
 //-------------------------------------------------------------------------------------------------
 // A callback is used to specify the amount of sections of menu items
@@ -194,23 +187,6 @@ void menu_select_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *da
   switch (cell_index->row) {
     case 0:
       window_stack_push(s_activity_window, true);
-      if (empty_menu) {
-        send_command(SYNC_MENU_ITEM_COMMAND);
-      }
-      // Populate menu
-      /*
-      switch (launch_reason()) {
-        case APP_LAUNCH_USER:
-        case APP_LAUNCH_QUICK_LAUNCH:
-          send_command(SYNC_MENU_ITEM_COMMAND);
-          break;
-        case APP_LAUNCH_SYSTEM:
-        case APP_LAUNCH_PHONE:
-        case APP_LAUNCH_WAKEUP:
-        case APP_LAUNCH_WORKER:
-          break;
-      }
-      */
       break;
     case 1:
       window_stack_push(s_mood_window, true);
@@ -227,13 +203,13 @@ static uint16_t menu_activity_get_num_sections_callback(MenuLayer *menu_layer, v
 // Each section has a number of items;  we use a callback to specify this
 // You can also dynamically add and remove items using this
 static uint16_t menu_activity_get_num_rows_callback(MenuLayer *menu_layer, uint16_t section_index, void *data) {
-  return menu_items_counter < MAX_MENU_ITEMS ? menu_items_counter : MAX_MENU_ITEMS;
+  return MAX_MENU_ITEMS_ACTIVITY;
 }
 
 // A callback is used to specify the height of the section header
 static int16_t menu_activity_get_cell_height_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *callback_context) {
   // This is a define provided in pebble.h that you may use for the default height
-  return 30;
+  return menu_activity_height[cell_index->row];
 }
 
 // A callback is used to specify the height of the section header
@@ -250,7 +226,7 @@ static void menu_activity_draw_header_callback(GContext* ctx, const Layer *cell_
 // This is the menu item draw callback where you specify what each item should look like
 static void menu_activity_draw_row_callback(GContext* ctx, const Layer *cell_layer, MenuIndex *cell_index, void *data) {
   // Use the row to specify which item we'll draw
-  menu_cell_title_draw(ctx, cell_layer, menu_activity_items[cell_index->row]);
+  menu_cell_basic_draw(ctx, cell_layer, menu_activity_items[cell_index->row], menu_activity_subs[cell_index->row], NULL);
 }
 
 void menu_activity_selection_changed_callback(MenuLayer *menu_layer, MenuIndex new_index, MenuIndex old_index, void *data) {
@@ -277,7 +253,7 @@ static uint16_t menu_mood_get_num_sections_callback(MenuLayer *menu_layer, void 
 // Each section has a number of items;  we use a callback to specify this
 // You can also dynamically add and remove items using this
 static uint16_t menu_mood_get_num_rows_callback(MenuLayer *menu_layer, uint16_t section_index, void *data) {
-  return 10;
+  return MAX_MENU_ITEMS_MOOD;
 }
 
 // A callback is used to specify the height of the section header
@@ -379,9 +355,6 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
             if (window_stack_get_top_window() != s_activity_window) {
               window_stack_push(s_activity_window, true);
             }
-            if (empty_menu) {
-              send_command(SYNC_MENU_ITEM_COMMAND);
-            }
             break;
           case MOOD_LABEL_COMMAND:
             vibes_enqueue_custom_pattern(pat);
@@ -393,15 +366,7 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
               window_stack_push(s_mood_window, true);
             }
             break;
-          case SYNC_MENU_ITEM_COMMAND:
-            // do something during the next iteration
-            break;
         }
-        break;
-      case MENU_ITEM_KEY:
-        text = t->value->cstring;
-        APP_LOG(APP_LOG_LEVEL_INFO, "MENU_ITEM_KEY received with value %s", text);
-        append_to_menu(text);
         break;
     }
     
@@ -544,17 +509,15 @@ static void activity_window_unload(Window *window) {
 static void mood_window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   GRect window_bounds = layer_get_bounds(window_layer);
-  
-  mood_icons[0] = gbitmap_create_with_resource(RESOURCE_ID_ANGRY);
-  mood_icons[1] = gbitmap_create_with_resource(RESOURCE_ID_ANXIOUS);
-  mood_icons[2] = gbitmap_create_with_resource(RESOURCE_ID_CONTENT);
-  mood_icons[3] = gbitmap_create_with_resource(RESOURCE_ID_DEPRESSED);
-  mood_icons[4] = gbitmap_create_with_resource(RESOURCE_ID_HAPPY);
-  mood_icons[5] = gbitmap_create_with_resource(RESOURCE_ID_JUST_OK);
-  mood_icons[6] = gbitmap_create_with_resource(RESOURCE_ID_MOTIVATED);
-  mood_icons[7] = gbitmap_create_with_resource(RESOURCE_ID_SAD);
-  mood_icons[8] = gbitmap_create_with_resource(RESOURCE_ID_STRESSED);
-  mood_icons[9] = gbitmap_create_with_resource(RESOURCE_ID_TIRED);
+
+  mood_icons[0] = gbitmap_create_with_resource(RESOURCE_ID_BORED);
+  mood_icons[1] = gbitmap_create_with_resource(RESOURCE_ID_CALM);
+  mood_icons[2] = gbitmap_create_with_resource(RESOURCE_ID_EXCITED);
+  mood_icons[3] = gbitmap_create_with_resource(RESOURCE_ID_HAPPY);
+  mood_icons[4] = gbitmap_create_with_resource(RESOURCE_ID_RELAXED);
+  mood_icons[5] = gbitmap_create_with_resource(RESOURCE_ID_STRESSED);
+  mood_icons[6] = gbitmap_create_with_resource(RESOURCE_ID_TENSE);
+  mood_icons[7] = gbitmap_create_with_resource(RESOURCE_ID_UPSET);
 
   // Create MenuLayer
   s_menu_mood_layer = menu_layer_create(GRect(0, 0, window_bounds.size.w, window_bounds.size.h));
@@ -575,25 +538,16 @@ static void mood_window_load(Window *window) {
 }
 
 static void mood_window_unload(Window *window) {
-  gbitmap_destroy(mood_icons[0]);
-  gbitmap_destroy(mood_icons[1]);
-  gbitmap_destroy(mood_icons[2]);
-  gbitmap_destroy(mood_icons[3]);
-  gbitmap_destroy(mood_icons[4]);
-  gbitmap_destroy(mood_icons[5]);
-  gbitmap_destroy(mood_icons[6]);
-  gbitmap_destroy(mood_icons[7]);
-  gbitmap_destroy(mood_icons[8]);
-  gbitmap_destroy(mood_icons[9]);
+  uint8_t i;
+
+  for (i = 0; i < MAX_MENU_ITEMS_MOOD; i++) {
+    gbitmap_destroy(mood_icons[i]);
+  }
 
   menu_layer_destroy(s_menu_mood_layer);
 }
 
 static void init() {
-  uint8_t i;
-  for (i = 0; i < MAX_MENU_ITEMS; i++) {
-    menu_activity_items[i] = malloc(MAX_MENU_ITEM_LENGTH);
-  }
 
   // Register callbacks
   app_message_register_inbox_received(inbox_received_callback);
@@ -648,11 +602,7 @@ static void deinit() {
   window_destroy(s_mood_window);
 
   persist_write_bool(FROM_WATCH_APP_KEY, false);
-  
-  uint8_t i;
-  for (i = 0; i < MAX_MENU_ITEMS; i++) {
-    free(menu_activity_items[i]);
-  }
+
 }
 
 int main(void) {

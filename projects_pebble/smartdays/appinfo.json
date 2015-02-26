@@ -15,23 +15,18 @@
     "media": [    
       {
         "type": "png",
-        "name": "ANGRY",
-        "file": "angry_pulse_32x32.png"
+        "name": "BORED",
+        "file": "bored_pulse_32x32.png"
       },
       {
         "type": "png",
-        "name": "ANXIOUS",
-        "file": "anxious_pulse_32x32.png"
+        "name": "CALM",
+        "file": "calm_pulse_32x32.png"
       },
       {
         "type": "png",
-        "name": "CONTENT",
-        "file": "content_pulse_32x32.png"
-      },
-      {
-        "type": "png",
-        "name": "DEPRESSED",
-        "file": "depressed_pulse_32x32.png"
+        "name": "EXCITED",
+        "file": "excited_pulse_32x32.png"
       },
       {
         "type": "png",
@@ -40,18 +35,8 @@
       },
       {
         "type": "png",
-        "name": "JUST_OK",
-        "file": "justOK_pulse_32x32.png"
-      },
-      {
-        "type": "png",
-        "name": "MOTIVATED",
-        "file": "motivated_pulse_32x32.png"
-      },
-      {
-        "type": "png",
-        "name": "SAD",
-        "file": "sad_pulse_32x32.png"
+        "name": "RELAXED",
+        "file": "relaxed_pulse_32x32.png"
       },
       {
         "type": "png",
@@ -60,8 +45,13 @@
       },
       {
         "type": "png",
-        "name": "TIRED",
-        "file": "tired_pulse_32x32.png"
+        "name": "TENSE",
+        "file": "tense_pulse_32x32.png"
+      },
+      {
+        "type": "png",
+        "name": "UPSET",
+        "file": "upset_pulse_32x32.png"
       }
     ]
   }

@@ -34,7 +34,6 @@ public class CurrentActivityDialog extends DialogFragment {
     private ArrayList<Task> activities;
     private ListView listView;
     private int selectedActivity;
-    private ActionMode mActionMode;
 
     public void setActivities(ArrayList<Task> a) {
         activities = a;
@@ -61,84 +60,11 @@ public class CurrentActivityDialog extends DialogFragment {
 
         final ArrayAdapter<Task> adapter = new ArrayAdapter<Task>(getActivity(), R.layout.activities_list_row, R.id.text1, activities);
 
-        final ActionMode.Callback mActionModeCallback = new ActionMode.Callback() {
-            // Called when the action mode is created; startActionMode() was called
-            @Override
-            public boolean onCreateActionMode(ActionMode mode, Menu menu) {
-                // Inflate a menu resource providing context menu items
-                MenuInflater inflater = mode.getMenuInflater();
-                inflater.inflate(R.menu.context_menu, menu);
-                mode.setTitle(adapter.getItem(selectedActivity).getName());
-                return true;
-            }
-
-            @Override
-            public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
-                return false; // Return false if nothing is done
-            }
-
-            // Called when the user selects a contextual menu item
-            @Override
-            public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
-                switch (item.getItemId()) {
-                    case R.id.menu_delete:
-                        if (adapter.getItem(selectedActivity) != Task.getDefaultTask()) {
-                            //Log.d("SmartDAYS", "Delete!!!");
-                            adapter.remove(adapter.getItem(selectedActivity));
-                        }
-                        mode.finish();
-                        return true;
-                    default:
-                        return false;
-                }
-            }
-
-            // Called when the user exits the action mode
-            @Override
-            public void onDestroyActionMode(ActionMode mode) {
-                mActionMode = null;
-            }
-        };
-
         final View rootView = getActivity().getLayoutInflater().inflate(R.layout.activities_list, null);
         listView = (ListView) rootView.findViewById(R.id.listViewCurrent);
         listView.setChoiceMode(AbsListView.CHOICE_MODE_SINGLE);
         //listView.setTranscriptMode(ListView.TRANSCRIPT_MODE_ALWAYS_SCROLL);
         listView.setAdapter(adapter);
-        listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
-            @Override
-            public boolean onItemLongClick(AdapterView<?> av, View v, int pos, long id) {
-                if (mActionMode != null) {
-                    return false;
-                }
-                selectedActivity = pos;
-                mActionMode = rootView.startActionMode(mActionModeCallback);
-                v.setSelected(true);
-                return true;
-            }
-        });
-
-        final EditText newActivity = (EditText) rootView.findViewById(R.id.editTextNewLabel);
-        Button buttonAddActivity = (Button) rootView.findViewById(R.id.buttonNewLabel);
-        buttonAddActivity.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View arg0) {
-                String temp = newActivity.getText().toString().trim();
-                //Log.d("SmartDAYS", "You entered: " + temp);
-                if (temp.length() > 0) {
-                    adapter.add(new Task(temp));
-                    Collections.sort(activities, new Comparator<Task>() {
-                        @Override
-                        public int compare(Task s1, Task s2) {
-                            return s1.getName().compareToIgnoreCase(s2.getName());
-                        }
-                    });
-                    newActivity.getText().clear();
-                    adapter.notifyDataSetChanged();
-                    listView.smoothScrollToPosition(activities.indexOf(temp));
-                }
-            }
-        });
 
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         builder.setTitle("Current activity")

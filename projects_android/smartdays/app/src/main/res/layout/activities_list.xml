@@ -24,31 +24,4 @@
             android:layout_alignParentLeft="true" />
     </RelativeLayout>
 
-    <RelativeLayout
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:layout_weight="0"
-        android:layout_margin="5dp">
-
-        <EditText
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/editTextNewLabel"
-            android:layout_alignTop="@+id/buttonNewLabel"
-            android:layout_alignBottom="@+id/buttonNewLabel"
-            android:layout_toLeftOf="@+id/buttonNewLabel"
-            android:layout_margin="5dp"
-            android:layout_alignParentTop="false"
-            android:layout_alignParentLeft="true"
-            android:layout_alignParentBottom="false" />
-
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="New Label"
-            android:id="@+id/buttonNewLabel"
-            android:layout_margin="5dp"
-            android:layout_alignParentBottom="false"
-            android:layout_alignParentRight="true" />
-    </RelativeLayout>
 </LinearLayout>

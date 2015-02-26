@@ -48,7 +48,6 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
     private Intent intent;
     private static MainActivity instance;
     public static Handler serviceMessagesHandler = null;
-    private int menuItemInitIndex = 0;
     private ArrayList<Task> activities;
     private CurrentActivityDialog currentActivityDialog;
 
@@ -199,16 +198,6 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
                         buttonStop.setEnabled(false);
                         showFilesControl();
                         uploadFiles();
-                        break;
-                    case Constants.SYNC_MENU_ITEM_COMMAND:
-                        if (menuItemInitIndex < activities.size()) {
-                            askService(Constants.SYNC_MENU_ITEM_COMMAND, activities.get(menuItemInitIndex).getName());
-                            Log.d(Constants.TAG, "Asking to send: " + activities.get(menuItemInitIndex));
-                            menuItemInitIndex++;
-                        }
-                        else {
-                            menuItemInitIndex = 0;
-                        }
                         break;
                     case Constants.ACTIVITY_LABEL_COMMAND:
                         buttonCurrentActivity.setText(msg.obj.toString());

@@ -21,21 +21,17 @@ public class Timeline extends Observable {
                 Task.getMinStartingTime(),
                 Task.getMaxStoppingTime()));
 
-        availableActivities = new ArrayList<Task>(20);
-        availableActivities.add(new Task("Breakfast"));
-        availableActivities.add(new Task("Car"));
-        availableActivities.add(new Task("Clean"));
-        availableActivities.add(new Task("Coffee"));
-        availableActivities.add(new Task("Cook"));
-        availableActivities.add(new Task("Dinner"));
-        availableActivities.add(new Task("Hygiene"));
-        availableActivities.add(new Task("Lunch"));
-        availableActivities.add(new Task("No activity"));
-        availableActivities.add(new Task("Rest"));
-        availableActivities.add(new Task("Sports"));
-        availableActivities.add(new Task("Walk"));
+        availableActivities = new ArrayList<Task>(10);
+        availableActivities.add(new Task("Socializing/Relaxing/Leisure"));
+        availableActivities.add(new Task("Eating/Drinking"));
+        availableActivities.add(new Task("Shopping"));
+        availableActivities.add(new Task("Sports/Exercise/Recreation"));
         availableActivities.add(new Task("Work"));
-        //TODO read file
+        availableActivities.add(new Task("Commuting"));
+        availableActivities.add(new Task("Sleeping"));
+        availableActivities.add(new Task("School"));
+        availableActivities.add(new Task("Household"));
+        availableActivities.add(new Task("No activity"));
     }
 
     public static synchronized Timeline getInstance() {
