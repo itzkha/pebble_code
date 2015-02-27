@@ -15,6 +15,8 @@ public class Timeline extends Observable {
     private List<ActivityBlock> activities;
     private ArrayList<Task> availableActivities = null;
 
+    private boolean needingWrite = false;
+
     private Timeline() {
         activities = new ArrayList();
         activities.add(new ActivityBlock(Task.getDefaultTask(),
@@ -49,18 +51,8 @@ public class Timeline extends Observable {
         if(newActivity.getBegin().compareTo(Utils.createTimestampFromHourMin(Task.getMinStartingTime())) < 0) {
             throw new RuntimeException("Invalid starting time!");
         }
-        if (newActivity.getEnd() != null) {
-            if (newActivity.getEnd().compareTo(Utils.createTimestampFromHourMin(Task.getMaxStoppingTime())) > 0) {
-                throw new RuntimeException("Invalid ending time!");
-            }
-        }
-        else {
-            for (ActivityBlock block : activities) {
-                if ( (newActivity.getBegin().compareTo(block.getBegin()) >= 0)  && (newActivity.getBegin().compareTo(block.getEnd()) <= 0) ) {
-                    newActivity.setEnd(new Timestamp(block.getEnd().getTime()));
-                    break;
-                }
-            }
+        if (newActivity.getEnd().compareTo(Utils.createTimestampFromHourMin(Task.getMaxStoppingTime())) > 0) {
+            throw new RuntimeException("Invalid ending time!");
         }
 
         ListIterator<ActivityBlock> iterator = activities.listIterator();
@@ -105,6 +97,8 @@ public class Timeline extends Observable {
 
         ensureListStability();
         Log.d("Timeline", toString());
+
+        needingWrite = true;
     }
 
     public synchronized void removeActivity(int index) {
@@ -116,6 +110,7 @@ public class Timeline extends Observable {
             activity.setSelected(false);
             ensureListStability();
             Log.d("Timeline", toString());
+            needingWrite = true;
         }
     }
 
@@ -225,5 +220,13 @@ public class Timeline extends Observable {
 
     public ArrayList<Task> getAvailableActivities() {
         return availableActivities;
+    }
+
+    public boolean isNeedingWrite() {
+        return needingWrite;
+    }
+
+    public void setNeedingWrite(boolean nw) {
+        needingWrite = nw;
     }
 }

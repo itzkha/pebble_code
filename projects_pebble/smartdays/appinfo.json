@@ -20,11 +20,6 @@
       },
       {
         "type": "png",
-        "name": "CALM",
-        "file": "calm_pulse_32x32.png"
-      },
-      {
-        "type": "png",
         "name": "EXCITED",
         "file": "excited_pulse_32x32.png"
       },
@@ -47,6 +42,11 @@
         "type": "png",
         "name": "TENSE",
         "file": "tense_pulse_32x32.png"
+      },
+      {
+        "type": "png",
+        "name": "TIRED",
+        "file": "tired_pulse_32x32.png"
       },
       {
         "type": "png",

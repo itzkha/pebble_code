@@ -66,12 +66,12 @@ static Window *s_mood_window;
 static MenuLayer *s_menu_mood_layer;
 static char* menu_mood_items[MAX_MENU_ITEMS_MOOD] = 
             {"Bored",
-            "Calm",
             "Excited",
             "Happy",
             "Relaxed",
             "Stressed",
             "Tense",
+            "Tired",
             "Upset"};
 static GBitmap *mood_icons[MAX_MENU_ITEMS_MOOD];
 
@@ -539,12 +539,12 @@ static void mood_window_load(Window *window) {
   GRect window_bounds = layer_get_bounds(window_layer);
 
   mood_icons[0] = gbitmap_create_with_resource(RESOURCE_ID_BORED);
-  mood_icons[1] = gbitmap_create_with_resource(RESOURCE_ID_CALM);
-  mood_icons[2] = gbitmap_create_with_resource(RESOURCE_ID_EXCITED);
-  mood_icons[3] = gbitmap_create_with_resource(RESOURCE_ID_HAPPY);
-  mood_icons[4] = gbitmap_create_with_resource(RESOURCE_ID_RELAXED);
-  mood_icons[5] = gbitmap_create_with_resource(RESOURCE_ID_STRESSED);
-  mood_icons[6] = gbitmap_create_with_resource(RESOURCE_ID_TENSE);
+  mood_icons[1] = gbitmap_create_with_resource(RESOURCE_ID_EXCITED);
+  mood_icons[2] = gbitmap_create_with_resource(RESOURCE_ID_HAPPY);
+  mood_icons[3] = gbitmap_create_with_resource(RESOURCE_ID_RELAXED);
+  mood_icons[4] = gbitmap_create_with_resource(RESOURCE_ID_STRESSED);
+  mood_icons[5] = gbitmap_create_with_resource(RESOURCE_ID_TENSE);
+  mood_icons[6] = gbitmap_create_with_resource(RESOURCE_ID_TIRED);
   mood_icons[7] = gbitmap_create_with_resource(RESOURCE_ID_UPSET);
 
   // Create MenuLayer

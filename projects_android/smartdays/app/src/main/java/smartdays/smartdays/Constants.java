@@ -30,6 +30,7 @@ public class Constants {
     public static final int ACTIVITY_LABEL_COMMAND = 21;
     public static final int MOOD_LABEL_COMMAND = 28;
     public static final int NEW_FILES_COMMAND = 27;
+    public static final int UPDATE_ACTIVITY_FILE = 23;
 
     public static final int SERVICE_STOPPED = 43;
 

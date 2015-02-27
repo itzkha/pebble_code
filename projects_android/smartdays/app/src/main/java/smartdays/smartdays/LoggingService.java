@@ -28,6 +28,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.sql.Time;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -125,7 +126,6 @@ public class LoggingService extends Service {
                 Log.d(Constants.TAG, "Stopping automatically");
                 stopAlarms();
                 stopLoggers();
-                writeActivitiesToFile();
                 closeFiles();
 
                 Log.d(Constants.TAG, "Starting automatically");
@@ -298,6 +298,9 @@ public class LoggingService extends Service {
                     case Constants.ACTIVITY_LABEL_COMMAND:
                         logLabel(msg.obj.toString(), Constants.ACTIVITY_LABEL_COMMAND);
                         break;
+                    case Constants.UPDATE_ACTIVITY_FILE:
+                        writeActivitiesToFile();
+                        break;
                     case Constants.STOP_COMMAND:
                         stop();
                         break;
@@ -329,14 +332,14 @@ public class LoggingService extends Service {
                     moodLabelCounter++;
 
                     if (activityLabelCounter >= 5) {                                                // 50 minutes
-                        activityLabelCounter = 0;
                         if (random.nextFloat() < 0.5) {
+                            activityLabelCounter = 0;
                             sendCommand(Constants.ACTIVITY_LABEL_COMMAND);                          // ask for labels (activity)
                         }
                     }
                     else if (moodLabelCounter >= 17) {                                              // 170 minutes
-                        moodLabelCounter = 0;
                         if (random.nextFloat() < 0.5) {
+                            moodLabelCounter = 0;
                             sendCommand(Constants.MOOD_LABEL_COMMAND);                              // ask for labels (mood)
                         }
                     }
@@ -443,8 +446,6 @@ public class LoggingService extends Service {
 
             Log.d(Constants.TAG, "Creating activity file...");
             fileName = "activity_" + deviceId + "_" + dateString + ".csv";
-            bufferOutLabelActivity = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName), true));
-            bufferOutLabelActivity.write(Constants.LABELS_FILE_HEADER.getBytes());
             editor.putString("activityFileName", fileName);
 
             Log.d(Constants.TAG, "Creating mood file...");
@@ -604,6 +605,7 @@ public class LoggingService extends Service {
             }
             bufferOutLabelActivity.flush();
             bufferOutLabelActivity.close();
+            Timeline.getInstance().setNeedingWrite(false);
         }
         catch (IOException ioe) {
         }
@@ -715,13 +717,7 @@ public class LoggingService extends Service {
                     SharedPreferences.Editor editor = settings.edit();
                     editor.putString("currentActivity", label);
                     editor.commit();
-/*
-                    String fileName = settings.getString("activityFileName", "");
-                    bufferOutLabelActivity = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName), true));
-                    bufferOutLabelActivity.write(line.getBytes());
-                    bufferOutLabelActivity.flush();
-                    bufferOutLabelActivity.close();
-*/
+
                     Timestamp now = new Timestamp(timestamp);
                     Timestamp end = null;
                     for (ActivityBlock block : activityTimeline.getActivities()) {                  // find the end of this label
@@ -734,6 +730,7 @@ public class LoggingService extends Service {
                     newBlock.setUndefinedEnd(true);
                     activityTimeline.addActivity(newBlock);
                     activityLabelCounter = 0;
+                    writeActivitiesToFile();
                     break;
 
                 case Constants.MOOD_LABEL_COMMAND:

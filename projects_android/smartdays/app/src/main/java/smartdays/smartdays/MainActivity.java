@@ -38,12 +38,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 import ch.heig_vd.dailyactivities.DailyActivities;
+import ch.heig_vd.dailyactivities.DailyActivitiesFragment;
 import ch.heig_vd.dailyactivities.model.ActivityBlock;
 import ch.heig_vd.dailyactivities.model.Task;
 import ch.heig_vd.dailyactivities.model.Timeline;
 
 
-public class MainActivity extends Activity implements  CurrentActivityDialog.NoticeDialogListener {
+public class MainActivity extends Activity implements CurrentActivityDialog.NoticeDialogListener {
 
     private Intent intent;
     private static MainActivity instance;
@@ -227,6 +228,14 @@ public class MainActivity extends Activity implements  CurrentActivityDialog.Not
         ((Button) findViewById(R.id.buttonChangeCurrentActivity)).setText(computeCurrentActivity());
 
         super.onResume();
+    }
+
+    @Override
+    protected void onPause() {
+        if (Timeline.getInstance().isNeedingWrite()) {
+            askService(Constants.UPDATE_ACTIVITY_FILE, "");
+        }
+        super.onPause();
     }
 
     @Override

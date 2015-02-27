@@ -1,5 +1,6 @@
 package ch.heig_vd.dailyactivities;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.TimePickerDialog;
 import android.content.DialogInterface;
@@ -114,6 +115,7 @@ public class NewActivityFragment extends Fragment {
                     activityBlock.setBegin(txtFrom.getText().toString());
                     activityBlock.setEnd(txtTo.getText().toString());
                     Timeline.getInstance().addActivity(activityBlock);
+
                     navigateBack();
                 }
             }
