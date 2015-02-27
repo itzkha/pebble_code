@@ -29,8 +29,6 @@ public class Constants {
     public static final int TIMESTAMP_COMMAND = 17;
     public static final int ACTIVITY_LABEL_COMMAND = 21;
     public static final int MOOD_LABEL_COMMAND = 28;
-    public static final float MOOD_RATIO = 0.05f;                                                    //~ 200 minutes
-    public static final float ACTIVITY_RATIO = 0.2f;                                                //~ 50 minutes
     public static final int NEW_FILES_COMMAND = 27;
 
     public static final int SERVICE_STOPPED = 43;

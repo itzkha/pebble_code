@@ -84,9 +84,11 @@ public class LoggingService extends Service {
     private int startFailCounter = 0;
     private int stopFailCounter = 0;
     private int timestampFailCounter = 0;
-    private int timestampCounter = 0;
     private int activityLabelFailCounter = 0;
     private int moodLabelFailCounter = 0;
+    private int timestampCounter = 0;
+    private int activityLabelCounter = 0;
+    private int moodLabelCounter = 0;
 
     private Random random;
     private File appDir;
@@ -123,6 +125,7 @@ public class LoggingService extends Service {
                 Log.d(Constants.TAG, "Stopping automatically");
                 stopAlarms();
                 stopLoggers();
+                writeActivitiesToFile();
                 closeFiles();
 
                 Log.d(Constants.TAG, "Starting automatically");
@@ -322,13 +325,22 @@ public class LoggingService extends Service {
                 }
                 else {
                     timestampCounter = 0;
-                    float randomValue = random.nextFloat();
-                    if (randomValue < Constants.MOOD_RATIO) {                                       // smaller first
-                        sendCommand(Constants.MOOD_LABEL_COMMAND);                                  // ask for labels (mood)
+                    activityLabelCounter++;
+                    moodLabelCounter++;
+
+                    if (activityLabelCounter >= 5) {                                                // 50 minutes
+                        activityLabelCounter = 0;
+                        if (random.nextFloat() < 0.5) {
+                            sendCommand(Constants.ACTIVITY_LABEL_COMMAND);                          // ask for labels (activity)
+                        }
                     }
-                    else if (randomValue < Constants.ACTIVITY_RATIO) {
-                        sendCommand(Constants.ACTIVITY_LABEL_COMMAND);                              // ask for labels (activity)
+                    else if (moodLabelCounter >= 17) {                                              // 170 minutes
+                        moodLabelCounter = 0;
+                        if (random.nextFloat() < 0.5) {
+                            sendCommand(Constants.MOOD_LABEL_COMMAND);                              // ask for labels (mood)
+                        }
                     }
+
                     synchronizationLabellingHandler.postDelayed(this, Constants.SYNCHRONIZATION_LABELLING_LONG_PERIOD);
                 }
             }
@@ -439,7 +451,6 @@ public class LoggingService extends Service {
             fileName = "mood_" + deviceId + "_" + dateString + ".csv";
             bufferOutLabelMood = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
             bufferOutLabelMood.write(Constants.LABELS_FILE_HEADER.getBytes());
-            logLabel("Don't know", Constants.MOOD_LABEL_COMMAND);
             editor.putString("moodFileName", fileName);
 
             Log.d(Constants.TAG, "Creating pebbleAccel file...");
@@ -578,7 +589,7 @@ public class LoggingService extends Service {
 
     }
 
-    private void stop() {
+    private void writeActivitiesToFile() {
         String fileName = settings.getString("activityFileName", "");       // save the labels in the file
         try {
             bufferOutLabelActivity = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
@@ -596,7 +607,11 @@ public class LoggingService extends Service {
         }
         catch (IOException ioe) {
         }
+    }
 
+    private void stop() {
+
+        writeActivitiesToFile();
 
         freeResources();
 
@@ -718,11 +733,13 @@ public class LoggingService extends Service {
                     ActivityBlock newBlock = new ActivityBlock(new Task(label), now, end);
                     newBlock.setUndefinedEnd(true);
                     activityTimeline.addActivity(newBlock);
+                    activityLabelCounter = 0;
                     break;
 
                 case Constants.MOOD_LABEL_COMMAND:
                     bufferOutLabelMood.write(line.getBytes());
                     bufferOutLabelMood.flush();
+                    moodLabelCounter = 0;
                     break;
             }
 

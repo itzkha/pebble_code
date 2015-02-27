@@ -16,8 +16,7 @@
 #define ACTIVITY_LABEL_COMMAND 21
 #define MOOD_LABEL_COMMAND 28
 
-#define MAX_MENU_ITEMS_ACTIVITY 10
-#define MAX_MENU_ITEM_LENGTH 15
+#define MAX_MENU_ITEMS_ACTIVITY 11
 #define MAX_MENU_ITEMS_MOOD 8
 
 #define N_PROGRESS_SYMBOLS 4
@@ -38,16 +37,45 @@ static MenuLayer *s_menu_layer;
 
 static Window *s_activity_window;
 static MenuLayer *s_menu_activity_layer;
-static char* menu_activity_items[MAX_MENU_ITEMS_ACTIVITY] = {"Relax", "Food", "Shopping", "Sports", "Work", "Commuting", "Sleeping", "School", "Household", "No activity"};
-static char* menu_activity_subs[MAX_MENU_ITEMS_ACTIVITY] = {"Socializing/Leisure", "Eating/Drinking", NULL, "Exercise/Recreation", NULL, "Car/Train", NULL, NULL, NULL, NULL};
-static uint8_t menu_activity_height[MAX_MENU_ITEMS_ACTIVITY] = {60, 60, 30, 60, 30, 60, 30, 30, 30, 30};
+static char* menu_activity_items[MAX_MENU_ITEMS_ACTIVITY] =
+            {"Commuting",
+            "Eat/Drink",
+            "Education",
+            "Household",
+            "Personal care",
+            "Prof. services",
+            "Shopping",
+            "Social/Leisure",
+            "Sports/Active",
+            "Working",
+            "No activity"};
+static char* menu_activity_subs[MAX_MENU_ITEMS_ACTIVITY] = 
+            {"foot, bike, train, car",  
+            "lunch, dinner, beer",
+            "in lecture, talks, hw",
+            "cook, clean, laundry",
+            "sleep, shower, toilet",
+            "bank, doctor's, haircut",
+            "grocery, store, mall",
+            "party, movies, museum",
+            "gym, skiing, biking, hiking",
+            "day-job, work-related",
+            NULL};
 
 static Window *s_mood_window;
 static MenuLayer *s_menu_mood_layer;
-static char* menu_mood_items[MAX_MENU_ITEMS_MOOD] = {"Bored", "Calm", "Excited", "Happy", "Relaxed", "Stressed", "Tense", "Upset"};
+static char* menu_mood_items[MAX_MENU_ITEMS_MOOD] = 
+            {"Bored",
+            "Calm",
+            "Excited",
+            "Happy",
+            "Relaxed",
+            "Stressed",
+            "Tense",
+            "Upset"};
 static GBitmap *mood_icons[MAX_MENU_ITEMS_MOOD];
 
-static const uint32_t const segments[] = { 100, 200, 100 };
+static const uint32_t const segments[] = { 100, 200, 100, 200, 100, 200, 100, 200, 100 };
 VibePattern pat = {
   .durations = segments,
   .num_segments = ARRAY_LENGTH(segments),
@@ -209,7 +237,7 @@ static uint16_t menu_activity_get_num_rows_callback(MenuLayer *menu_layer, uint1
 // A callback is used to specify the height of the section header
 static int16_t menu_activity_get_cell_height_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *callback_context) {
   // This is a define provided in pebble.h that you may use for the default height
-  return menu_activity_height[cell_index->row];
+  return 50;
 }
 
 // A callback is used to specify the height of the section header

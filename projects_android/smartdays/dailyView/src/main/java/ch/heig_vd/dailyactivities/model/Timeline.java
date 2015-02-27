@@ -21,16 +21,17 @@ public class Timeline extends Observable {
                 Task.getMinStartingTime(),
                 Task.getMaxStoppingTime()));
 
-        availableActivities = new ArrayList<Task>(10);
-        availableActivities.add(new Task("Socializing/Relaxing/Leisure"));
-        availableActivities.add(new Task("Eating/Drinking"));
-        availableActivities.add(new Task("Shopping"));
-        availableActivities.add(new Task("Sports/Exercise/Recreation"));
-        availableActivities.add(new Task("Work"));
+        availableActivities = new ArrayList<Task>(11);
         availableActivities.add(new Task("Commuting"));
-        availableActivities.add(new Task("Sleeping"));
-        availableActivities.add(new Task("School"));
+        availableActivities.add(new Task("Eat/Drink"));
+        availableActivities.add(new Task("Education"));
         availableActivities.add(new Task("Household"));
+        availableActivities.add(new Task("Personal care"));
+        availableActivities.add(new Task("Prof. services"));
+        availableActivities.add(new Task("Shopping"));
+        availableActivities.add(new Task("Social/Leisure"));
+        availableActivities.add(new Task("Sports/Active"));
+        availableActivities.add(new Task("Working"));
         availableActivities.add(new Task("No activity"));
     }
 
