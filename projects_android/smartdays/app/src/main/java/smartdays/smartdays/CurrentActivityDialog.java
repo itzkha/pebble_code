@@ -4,26 +4,31 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.ActionMode;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
+import ch.heig_vd.dailyactivities.model.ActivityBlock;
 import ch.heig_vd.dailyactivities.model.Task;
 
 /**
@@ -57,12 +62,12 @@ public class CurrentActivityDialog extends DialogFragment {
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
 
-        final ArrayAdapter<Task> adapter = new ArrayAdapter<Task>(getActivity(), R.layout.activities_list_row, R.id.text1, activities);
+//        final ArrayAdapter<Task> adapter = new ArrayAdapter<Task>(getActivity(), R.layout.activities_list_row, R.id.textActivityLabel, activities);
+        final LabelAdapter adapter = new LabelAdapter(getActivity(), R.layout.activities_list_row, activities);
 
         final View rootView = getActivity().getLayoutInflater().inflate(R.layout.activities_list, null);
         listView = (ListView) rootView.findViewById(R.id.listViewCurrent);
         listView.setChoiceMode(AbsListView.CHOICE_MODE_SINGLE);
-        //listView.setTranscriptMode(ListView.TRANSCRIPT_MODE_ALWAYS_SCROLL);
         listView.setAdapter(adapter);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
@@ -83,5 +88,51 @@ public class CurrentActivityDialog extends DialogFragment {
                });
 
         return builder.create();
+    }
+
+    class LabelAdapter extends ArrayAdapter<Task> {
+        private Context context;
+        private LayoutInflater inflater;
+        ArrayList<Task> activities;
+
+        public LabelAdapter(Context context, int resource) {
+            super(context, resource);
+            this.context = context;
+            activities = new ArrayList();
+        }
+
+        public LabelAdapter(Context context, int resource, ArrayList<Task> items) {
+            super(context, resource, items);
+            this.context = context;
+            activities = items;
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup group) {
+            ViewHolder holder;
+            if (convertView == null) {
+                holder = new ViewHolder();
+                inflater = ((Activity) context).getLayoutInflater();
+                convertView = inflater.inflate(R.layout.activities_list_row, group, false);
+                holder.name = (TextView) convertView.findViewById(R.id.textActivityLabel);
+                holder.examples = (TextView) convertView.findViewById(R.id.textActivityExamples);
+                convertView.setTag(holder);
+            }
+            else {
+                holder = (ViewHolder) convertView.getTag();
+            }
+
+            Task selected = activities.get(position);
+            holder.name.setText(selected.getName());
+            holder.examples.setText(selected.getExamples());
+
+            return convertView;
+        }
+
+    }
+
+    static class ViewHolder {
+        public TextView name;
+        public TextView examples;
     }
 }

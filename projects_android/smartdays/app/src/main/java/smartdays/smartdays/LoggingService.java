@@ -333,13 +333,11 @@ public class LoggingService extends Service {
 
                     if (activityLabelCounter >= 5) {                                                // 50 minutes
                         if (random.nextFloat() < 0.5) {
-                            activityLabelCounter = 0;
                             sendCommand(Constants.ACTIVITY_LABEL_COMMAND);                          // ask for labels (activity)
                         }
                     }
                     else if (moodLabelCounter >= 17) {                                              // 170 minutes
                         if (random.nextFloat() < 0.5) {
-                            moodLabelCounter = 0;
                             sendCommand(Constants.MOOD_LABEL_COMMAND);                              // ask for labels (mood)
                         }
                     }

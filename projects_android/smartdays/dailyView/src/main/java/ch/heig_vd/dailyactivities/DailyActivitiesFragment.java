@@ -52,7 +52,7 @@ public class DailyActivitiesFragment extends Fragment {
         mActivitiesAdapter = new ActivityAdapter(getActivity(), R.layout.list_item_activity, sample);
 
         // Get a reference to the ListView, and attach this adapter to it.
-        ListView listActivities;listActivities = (ListView) rootView.findViewById(R.id.list_activities);
+        ListView listActivities = (ListView) rootView.findViewById(R.id.list_activities);
         listActivities.setAdapter(mActivitiesAdapter);
 
         listActivities.setOnItemClickListener(new AdapterView.OnItemClickListener() {

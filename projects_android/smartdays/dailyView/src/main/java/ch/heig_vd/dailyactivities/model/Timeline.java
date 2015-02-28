@@ -24,16 +24,16 @@ public class Timeline extends Observable {
                 Task.getMaxStoppingTime()));
 
         availableActivities = new ArrayList<Task>(11);
-        availableActivities.add(new Task("Commuting"));
-        availableActivities.add(new Task("Eat/Drink"));
-        availableActivities.add(new Task("Education"));
-        availableActivities.add(new Task("Household"));
-        availableActivities.add(new Task("Personal care"));
-        availableActivities.add(new Task("Prof. services"));
-        availableActivities.add(new Task("Shopping"));
-        availableActivities.add(new Task("Social/Leisure"));
-        availableActivities.add(new Task("Sports/Active"));
-        availableActivities.add(new Task("Working"));
+        availableActivities.add(new Task("Commuting", "foot, bike, train, car"));
+        availableActivities.add(new Task("Eat/Drink", "lunch, dinner, beer"));
+        availableActivities.add(new Task("Education", "in lecture, talks, hw"));
+        availableActivities.add(new Task("Household", "cook, clean, laundry"));
+        availableActivities.add(new Task("Personal care", "sleep, shower, toilet"));
+        availableActivities.add(new Task("Prof. services", "bank, doctor's, haircut"));
+        availableActivities.add(new Task("Shopping", "grocery, store, mall"));
+        availableActivities.add(new Task("Social/Leisure", "party, movies, museum"));
+        availableActivities.add(new Task("Sports/Active", "gym, skiing, biking, hiking"));
+        availableActivities.add(new Task("Working", "day-job, work-related"));
         availableActivities.add(new Task("No activity"));
     }
 

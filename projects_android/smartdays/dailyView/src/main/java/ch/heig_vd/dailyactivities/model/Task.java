@@ -6,6 +6,7 @@ package ch.heig_vd.dailyactivities.model;
  */
 public class Task {
     private String name;
+    private String examples;
     private static final Task DEFAULT_TASK = new Task("No Activity");
 
     /**
@@ -14,6 +15,16 @@ public class Task {
      */
     public Task(String name) {
         this.name = name;
+        this.examples = "";
+    }
+
+    /**
+     * Creates a new activity from a name.
+     * @param name The activity name
+     */
+    public Task(String name, String examples) {
+        this.name = name;
+        this.examples = examples;
     }
 
     /**
@@ -22,6 +33,14 @@ public class Task {
      */
     public String getName() {
         return name;
+    }
+
+    /**
+     * Returns the string name of the activity.
+     * @return The string name of the activity
+     */
+    public String getExamples() {
+        return examples;
     }
 
     /**

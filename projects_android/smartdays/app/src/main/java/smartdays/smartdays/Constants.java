@@ -14,7 +14,7 @@ public class Constants {
     public static final int PACKET_SIZE = 14;                                                       // long + short + short + short
     public static final int PHONE_SAMPLING_PERIOD_MS = PEBBLE_SAMPLING_PERIOD_MS;                   // 40 mS
     public static final int PHONE_SAMPLING_PERIOD_NS = PEBBLE_SAMPLING_PERIOD_MS * 1000000;         // 40 mS
-    public static final int SYNCHRONIZATION_LABELLING_LONG_PERIOD = 1000 * 60 * 10;                 // 10 minutes
+    public static final int SYNCHRONIZATION_LABELLING_LONG_PERIOD = 1000 * 60 * 5;                  // 5 minutes
     public static final int SYNCHRONIZATION_LABELLING_SHORT_PERIOD = 1000;                          // 1 second
     public static final int LOCATION_PERIOD = 1000 * 60 * 5;                                        // 5 minutes
     public static final int MAX_FAILS = 5;
