@@ -22,6 +22,8 @@ public class PhoneSensorEventListener implements SensorEventListener {
     private long firstTimeStampReal;
     private BufferedOutputStream bufferOutPhone;
     private boolean firstTime;
+    private int sampleCounter;
+    private ByteBuffer byteBuffer;
 
     private PhoneData currentSample;
     private PhoneData previousSample;
@@ -30,6 +32,8 @@ public class PhoneSensorEventListener implements SensorEventListener {
         dataBuffer = b;
         bufferOutPhone = bop;
         firstTime = true;
+        sampleCounter = 0;
+        byteBuffer = null;
     }
 
     @Override
@@ -67,15 +71,20 @@ public class PhoneSensorEventListener implements SensorEventListener {
                     dataBuffer.putData(bestSample);
                 }
                 if (bufferOutPhone != null) {
-                    ByteBuffer byteBuffer = ByteBuffer.allocate(Constants.PACKET_SIZE);
-                    byteBuffer.putLong(actualTimeStamp);
+                    if ((sampleCounter % 25) == 0) {
+                        byteBuffer = ByteBuffer.allocate(Constants.PACKET_SIZE);
+                        byteBuffer.putLong(actualTimeStamp);
+                    }
                     for (int i = 0; i < 3; i++) {
                         byteBuffer.putShort(bestSample.getXYZ()[i]);
                     }
-                    try {
-                        bufferOutPhone.write(byteBuffer.array());                                   // write Phone signals  (timestamp + data)
-                    } catch (IOException ioe) {
-                        Log.d("SmartDAYS", "Error writing phone data...");
+                    sampleCounter++;
+                    if ((sampleCounter % 25) == 0) {
+                        try {
+                            bufferOutPhone.write(byteBuffer.array());                                   // write Phone signals  (timestamp + data)
+                        } catch (IOException ioe) {
+                            Log.d("SmartDAYS", "Error writing phone data...");
+                        }
                     }
                 }
             }
