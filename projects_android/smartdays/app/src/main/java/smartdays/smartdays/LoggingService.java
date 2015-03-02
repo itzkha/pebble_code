@@ -67,7 +67,7 @@ public class LoggingService extends Service {
     private BufferedOutputStream bufferOutLabelActivity = null;
     private BufferedOutputStream bufferOutLabelMood = null;
     private PhoneDataBuffer phoneDataBuffer = null;
-    private Timeline activityTimeline;
+    private Timeline activityTimeline = null;
 
     private SmartDaysPebbleDataLogReceiver dataloggingReceiver;
     private PebbleKit.PebbleDataReceiver pebbleAppMessageDataReceiver;
@@ -126,12 +126,16 @@ public class LoggingService extends Service {
                 Log.d(Constants.TAG, "Stopping automatically");
                 stopAlarms();
                 stopLoggers();
+                writeActivitiesToFile();
                 closeFiles();
 
                 Log.d(Constants.TAG, "Starting automatically");
                 openFiles();
+                createTimeline();
                 startLoggers(false);
                 startAlarms();
+
+                logLabel(settings.getString("currentActivity", Task.getDefaultTask().getName()), Constants.ACTIVITY_LABEL_COMMAND);
             }
         };
         Calendar calendar = Calendar.getInstance();
@@ -147,10 +151,9 @@ public class LoggingService extends Service {
         phoneDataBuffer = null;
 
         //------------------------------------------------------------------------------------------
-        activityTimeline = Timeline.getInstance();
-        ActivityBlock defaultBlock = new ActivityBlock(new Task(Task.getDefaultTask().getName()), new Timestamp(System.currentTimeMillis()), Task.getMaxStoppingTime());
-        defaultBlock.setUndefinedEnd(true);
-        activityTimeline.addActivity(defaultBlock);
+        createTimeline();
+
+        //------------------------------------------------------------------------------------------
         openFiles();
 
         //------------------------------------------------------------------------------------------
@@ -312,6 +315,16 @@ public class LoggingService extends Service {
         running = false;
     }
 
+    private void createTimeline() {
+        if (activityTimeline != null) {
+            activityTimeline.removeAllActivities();
+        }
+        activityTimeline = Timeline.getInstance();
+        ActivityBlock defaultBlock = new ActivityBlock(new Task(Task.getDefaultTask().getName()), new Timestamp(System.currentTimeMillis()), Task.getMaxStoppingTime());
+        defaultBlock.setUndefinedEnd(true);
+        activityTimeline.addActivity(defaultBlock);
+    }
+
     private void startAlarms() {
 
         //------------------------------------------------------------------------------------------
@@ -331,12 +344,12 @@ public class LoggingService extends Service {
                     activityLabelCounter++;
                     moodLabelCounter++;
 
-                    if (activityLabelCounter >= 5) {                                                // 50 minutes
+                    if (activityLabelCounter >= 10) {                                               // 50 minutes
                         if (random.nextFloat() < 0.5) {
                             sendCommand(Constants.ACTIVITY_LABEL_COMMAND);                          // ask for labels (activity)
                         }
                     }
-                    else if (moodLabelCounter >= 17) {                                              // 170 minutes
+                    else if (moodLabelCounter >= 34) {                                              // 170 minutes
                         if (random.nextFloat() < 0.5) {
                             sendCommand(Constants.MOOD_LABEL_COMMAND);                              // ask for labels (mood)
                         }
@@ -444,6 +457,8 @@ public class LoggingService extends Service {
 
             Log.d(Constants.TAG, "Creating activity file...");
             fileName = "activity_" + deviceId + "_" + dateString + ".csv";
+            bufferOutLabelActivity = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
+            bufferOutLabelActivity.write(Constants.LABELS_FILE_HEADER.getBytes());
             editor.putString("activityFileName", fileName);
 
             Log.d(Constants.TAG, "Creating mood file...");
@@ -631,6 +646,8 @@ public class LoggingService extends Service {
         askActivity("No activity");
 
         Timeline.getInstance().removeAllActivities();
+
+        fusedLocationService.stop();
 
         askActivity(Constants.SERVICE_STOPPED);
 

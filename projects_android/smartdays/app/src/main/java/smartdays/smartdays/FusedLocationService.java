@@ -31,8 +31,8 @@ public class FusedLocationService implements LocationListener, GoogleApiClient.C
 
     public FusedLocationService(Context context) {
         locationRequest = LocationRequest.create();
-        //locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
+        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        //locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
         locationRequest.setInterval(INTERVAL);
         locationRequest.setFastestInterval(FASTEST_INTERVAL);
 
@@ -49,12 +49,16 @@ public class FusedLocationService implements LocationListener, GoogleApiClient.C
 
     @Override
     public void onConnected(Bundle connectionHint) {
+        LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, locationRequest, this);
+
+        /*
         Location currentLocation = fusedLocationProviderApi.getLastLocation(googleApiClient);
 
         if (currentLocation != null) {
             location = currentLocation;
             Log.d(Constants.TAG, "Connected - Location= " + location.getTime());
         }
+        */
 
         /*
         if (currentLocation != null && currentLocation.getTime() > REFRESH_TIME) {
@@ -87,13 +91,17 @@ public class FusedLocationService implements LocationListener, GoogleApiClient.C
             }
         }
         */
-        Log.d(Constants.TAG, "Changed - Location= " + location.getTime());
         location = loc;
+        Log.d(Constants.TAG, "Location changed - Time=" + location.getTime() + " Lat=" + location.getLatitude() + " Long=" + location.getLongitude());
     }
 
     public Location getLocation() {
         Log.d(Constants.TAG, "Location asked");
         return location;
+    }
+
+    public void stop() {
+        LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, this);
     }
 
     @Override
