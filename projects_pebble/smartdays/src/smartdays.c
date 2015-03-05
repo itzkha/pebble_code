@@ -85,7 +85,7 @@ VibePattern pat = {
 DictionaryIterator iter;
 DictionaryIterator* p_iter = &iter;
 static int current_command;
-
+static bool error_flag = false;
 
 void send_command(int command);
 void send_label(char* label, int command);
@@ -101,27 +101,34 @@ static void worker_message_handler(uint16_t type, AppWorkerMessage *data) {
     switch (data->data1) {
       case DATA_LOGGING_SUCCESS:
         APP_LOG(APP_LOG_LEVEL_INFO, "Log OK");
-        text_layer_set_text(s_status_layer, "Log OK");
+        if (!error_flag) {
+          text_layer_set_text(s_status_layer, "Log OK");
+        }
         break;
       case DATA_LOGGING_BUSY:
         APP_LOG(APP_LOG_LEVEL_INFO, "Someone else is writing to this log!");
-        text_layer_set_text(s_status_layer, "Someone else is writing to this log!");
+        text_layer_set_text(s_status_layer, "Log error");
+        error_flag = true;
         break;
       case DATA_LOGGING_FULL:
         APP_LOG(APP_LOG_LEVEL_INFO, "No more space to save data!");
-        text_layer_set_text(s_status_layer, "No more space to save data!");
+        text_layer_set_text(s_status_layer, "Log error");
+        error_flag = true;
         break;
       case DATA_LOGGING_NOT_FOUND:
         APP_LOG(APP_LOG_LEVEL_INFO, "The log does not exist!");
-        text_layer_set_text(s_status_layer, "The log does not exist!");
+        text_layer_set_text(s_status_layer, "Log error");
+        error_flag = true;
         break;
       case DATA_LOGGING_CLOSED:
         APP_LOG(APP_LOG_LEVEL_INFO, "The log was made inactive!");
-        text_layer_set_text(s_status_layer, "The log was made inactive!");
+        text_layer_set_text(s_status_layer, "Log error");
+        error_flag = true;
         break;
       case DATA_LOGGING_INVALID_PARAMS:
         APP_LOG(APP_LOG_LEVEL_INFO, "Invalid parameters!");
-        text_layer_set_text(s_status_layer, "Invalid parameters!");
+        text_layer_set_text(s_status_layer, "Log error");
+        error_flag = true;
         break;
     }
   }
@@ -138,9 +145,11 @@ static void start_worker() {
     if (result == APP_WORKER_RESULT_SUCCESS) {
       APP_LOG(APP_LOG_LEVEL_INFO, "Worker launched!");
       text_layer_set_text(s_status_layer, "Worker launched!");
-    } else {
+    }
+    else {
       APP_LOG(APP_LOG_LEVEL_INFO, "Error launching worker!");
-      text_layer_set_text(s_status_layer, "Error launching worker!");
+      text_layer_set_text(s_status_layer, "Worker error!");
+      error_flag = true;
     }
   }
   else {
@@ -159,9 +168,11 @@ static void stop_worker() {
     if (result == APP_WORKER_RESULT_SUCCESS) {
       APP_LOG(APP_LOG_LEVEL_INFO, "Worker stopped!");
       text_layer_set_text(s_status_layer, "Worker stopped!");
-    } else {
+    }
+    else {
       APP_LOG(APP_LOG_LEVEL_INFO, "Error killing worker!");
       text_layer_set_text(s_status_layer, "Error killing worker!");
+      error_flag = true;
     }
   }
   else {
@@ -193,9 +204,15 @@ static int16_t menu_get_cell_height_callback(MenuLayer *menu_layer, MenuIndex *c
 // This is the menu item draw callback where you specify what each item should look like
 static void menu_draw_row_callback(GContext* ctx, const Layer *cell_layer, MenuIndex *cell_index, void *data) {
   // Use the row to specify which item we'll draw
+  uint8_t reason = launch_reason();
   switch (cell_index->row) {
     case 0:
-      menu_cell_basic_draw(ctx, cell_layer, "Activities", "What are you doing?", NULL);
+      if ((reason == APP_LAUNCH_USER)  || (reason == APP_LAUNCH_QUICK_LAUNCH) ) {
+        menu_cell_basic_draw(ctx, cell_layer, "Activities", "Enter next activity", NULL);
+      }
+      else {
+        menu_cell_basic_draw(ctx, cell_layer, "Activities", "What are you doing?", NULL);
+      }
       break;
     case 1:
       menu_cell_basic_draw(ctx, cell_layer, "Mood", "How do you feel?", NULL);
@@ -248,7 +265,13 @@ static int16_t menu_activity_get_header_height_callback(MenuLayer *menu_layer, u
 
 // Here we draw what each header is
 static void menu_activity_draw_header_callback(GContext* ctx, const Layer *cell_layer, uint16_t section_index, void *data) {
-  menu_cell_basic_header_draw(ctx, cell_layer, "What are you doing?");
+  uint8_t reason = launch_reason();
+  if ((reason == APP_LAUNCH_USER)  || (reason == APP_LAUNCH_QUICK_LAUNCH) ) {
+    menu_cell_basic_header_draw(ctx, cell_layer, "Enter next activity");
+  }
+  else {
+    menu_cell_basic_header_draw(ctx, cell_layer, "What are you doing?");
+  }
 }
 
 // This is the menu item draw callback where you specify what each item should look like
@@ -354,7 +377,6 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   // Get the first pair
   Tuple *t = dict_read_first(iterator);
   int command;
-  char* text;
 
   s_ticks = 0;
 
@@ -376,7 +398,7 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
             break;
           case ACTIVITY_LABEL_COMMAND:
             vibes_enqueue_custom_pattern(pat);
-            text_layer_set_text(s_status_layer, "What are you doing?" );
+            text_layer_set_text(s_status_layer, "What are you doing?");
             if (window_stack_get_top_window() == s_mood_window) {
               window_stack_pop(true);
             }
@@ -425,6 +447,8 @@ static void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResul
       APP_LOG(APP_LOG_LEVEL_INFO, "Label command sent failed");
       break;
   }
+  text_layer_set_text(s_status_layer, "Comm. failed!");
+  error_flag = true;
 }
 
 static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
@@ -479,7 +503,13 @@ static void main_window_load(Window *window) {
     text_layer_set_text(s_status_layer, "Waiting command...");
   }
   else {
-    text_layer_set_text(s_status_layer, "What are you doing?");
+    uint8_t reason = launch_reason();
+    if ((reason == APP_LAUNCH_USER)  || (reason == APP_LAUNCH_QUICK_LAUNCH) ) {
+      text_layer_set_text(s_status_layer, "Enter next activity");
+    }
+    else {
+      text_layer_set_text(s_status_layer, "What are you doing?");
+    }
   }
   text_layer_set_text_alignment(s_status_layer, GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(s_status_layer));

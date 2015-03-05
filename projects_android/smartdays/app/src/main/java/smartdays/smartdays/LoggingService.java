@@ -28,7 +28,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.sql.Time;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -140,8 +139,10 @@ public class LoggingService extends Service {
         };
         Calendar calendar = Calendar.getInstance();
         GregorianCalendar gc = new GregorianCalendar(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DATE), 23, 59, 59);
+//        GregorianCalendar gc = new GregorianCalendar(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DATE), 15, 42, 00);
         timer = new Timer();
         timer.schedule(timerTask, gc.getTime(), 24 * 60 * 60 * 1000);
+//        timer.schedule(timerTask, gc.getTime(), 2 * 60 * 1000);
 
         //------------------------------------------------------------------------------------------
         fusedLocationService = new FusedLocationService(getApplicationContext());
