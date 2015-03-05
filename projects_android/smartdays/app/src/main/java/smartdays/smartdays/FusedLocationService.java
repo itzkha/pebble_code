@@ -19,7 +19,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class FusedLocationService implements LocationListener, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
-    private static final long INTERVAL = 1000 * 60 * 5;
+    private static final long INTERVAL = Constants.LOCATION_PERIOD;
     private static final long FASTEST_INTERVAL = 1000 * 60 * 1;
     private static final long INTERVAL_TO_REMOVE = 1000 * 60 * 4;
     private static final long REFRESH_TIME = 1000 * 60 * 5;
@@ -31,8 +31,8 @@ public class FusedLocationService implements LocationListener, GoogleApiClient.C
 
     public FusedLocationService(Context context) {
         locationRequest = LocationRequest.create();
-        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        //locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
+        //locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
         locationRequest.setInterval(INTERVAL);
         locationRequest.setFastestInterval(FASTEST_INTERVAL);
 
