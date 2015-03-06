@@ -139,8 +139,10 @@ public class LoggingService extends Service {
             }
         };
         Calendar calendar = Calendar.getInstance();
+//        GregorianCalendar gc = new GregorianCalendar(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DATE), 23, 59, 59);
         GregorianCalendar gc = new GregorianCalendar(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DATE), 23, 59, 59);
         timer = new Timer();
+//        timer.schedule(timerTask, gc.getTime(), 24 * 60 * 60 * 1000);
         timer.schedule(timerTask, gc.getTime(), 24 * 60 * 60 * 1000);
 
         //------------------------------------------------------------------------------------------
