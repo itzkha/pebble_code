@@ -19,9 +19,7 @@ public class Timeline extends Observable {
 
     private Timeline() {
         activities = new ArrayList();
-        activities.add(new ActivityBlock(Task.getDefaultTask(),
-                Task.getMinStartingTime(),
-                Task.getMaxStoppingTime()));
+        resetTimeline();
 
         availableActivities = new ArrayList<Task>(11);
         availableActivities.add(new Task("Commuting", "foot, bike, train, car"));
@@ -48,10 +46,10 @@ public class Timeline extends Observable {
         Log.d("Timeline", toString());
         Log.d("Timeline", "Trying to add " + newActivity);
 
-        if(newActivity.getBegin().compareTo(Utils.createTimestampFromHourMin(Task.getMinStartingTime())) < 0) {
+        if(newActivity.getBegin().compareTo(Task.getMinStartingTimestamp()) < 0) {
             throw new RuntimeException("Invalid starting time!");
         }
-        if (newActivity.getEnd().compareTo(Utils.createTimestampFromHourMin(Task.getMaxStoppingTime())) > 0) {
+        if (newActivity.getEnd().compareTo(Task.getMaxStoppingTimestamp()) > 0) {
             throw new RuntimeException("Invalid ending time!");
         }
 
@@ -114,17 +112,11 @@ public class Timeline extends Observable {
         }
     }
 
-    public synchronized void removeAllActivities() {
-        int i = 0;
-        while (i < activities.size()) {
-            if (activities.get(i).getTask().isDefaultTask()) {
-                i++;
-            }
-            else {
-                this.removeActivity(i);
-                i = 0;
-            }
-        }
+    public synchronized void resetTimeline() {
+        activities.clear();
+        ActivityBlock defaultBlock = new ActivityBlock(new Task(Task.getDefaultTask().getName()), Task.getMinStartingTimestamp(), Task.getMaxStoppingTimestamp());
+        defaultBlock.setUndefinedEnd(true);
+        activities.add(defaultBlock);
     }
 
     private synchronized void ensureListStability() {

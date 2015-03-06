@@ -55,8 +55,8 @@ public class NewActivityFragment extends Fragment {
             activities.add(Task.getDefaultTask());
         }
 
-        txtFrom.setText(Task.getMinStartingTime());
-        txtTo.setText(Task.getMaxStoppingTime());
+        txtFrom.setText(Task.getMinStartingTimeString());
+        txtTo.setText(Task.getMaxStoppingTimeString());
         activityBlock = new ActivityBlock(new Task(""), txtFrom.getText().toString(), txtTo.getText().toString());
 
         // Create an ArrayAdapter using the task array and a default spinner layout

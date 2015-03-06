@@ -1,5 +1,7 @@
 package ch.heig_vd.dailyactivities.model;
 
+import java.sql.Timestamp;
+
 /**
  * A simple wrapper class for the String class.
  * The only change is to compare the string in a case insensitive manner.
@@ -69,11 +71,19 @@ public class Task {
         return super.equals(o);
     }
 
-    public static String getMinStartingTime() {
+    public static Timestamp getMinStartingTimestamp() {
+        return Utils.createTimestampFromHourMinSec("00:00:00");
+    }
+
+    public static Timestamp getMaxStoppingTimestamp() {
+        return Utils.createTimestampFromHourMinSec("23:59:59");
+    }
+
+    public static String getMinStartingTimeString() {
         return "00:00";
     }
 
-    public static String getMaxStoppingTime() {
+    public static String getMaxStoppingTimeString() {
         return "23:59";
     }
 

@@ -92,7 +92,8 @@ public class LoggingService extends Service {
 
     private Random random;
     private File appDir;
-    private Timer timer;
+    private Timer timerStop;
+    private Timer timerStart;
 
 
     public static boolean isRunning() {
@@ -119,15 +120,23 @@ public class LoggingService extends Service {
         PowerManager pm = (PowerManager) this.getSystemService(Context.POWER_SERVICE);
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, Constants.TAG);
 
-
-        TimerTask timerTask = new TimerTask() {
+        //------------------------------------------------------------------------------------------
+        TimerTask timerTaskStop = new TimerTask() {
             public void run() {
                 Log.d(Constants.TAG, "Stopping automatically");
                 stopAlarms();
                 stopLoggers();
                 writeActivitiesToFile();
                 closeFiles();
+            }
+        };
+        Calendar calendarToday = Calendar.getInstance();
+        GregorianCalendar gcToday = new GregorianCalendar(calendarToday.get(Calendar.YEAR), calendarToday.get(Calendar.MONTH), calendarToday.get(Calendar.DATE), 23, 59, 59);
+        timerStop = new Timer();
+        timerStop.schedule(timerTaskStop, gcToday.getTime(), 24 * 60 * 60 * 1000);
 
+        TimerTask timerTaskStart = new TimerTask() {
+            public void run() {
                 Log.d(Constants.TAG, "Starting automatically");
                 openFiles();
                 createTimeline();
@@ -137,14 +146,11 @@ public class LoggingService extends Service {
                 logLabel(settings.getString("currentActivity", Task.getDefaultTask().getName()), Constants.ACTIVITY_LABEL_COMMAND);
             }
         };
-        Calendar calendar = Calendar.getInstance();
-//        GregorianCalendar gc = new GregorianCalendar(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DATE), 23, 59, 59);
-        GregorianCalendar gc = new GregorianCalendar(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DATE), 23, 59, 59);
-//        GregorianCalendar gc = new GregorianCalendar(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DATE), 15, 42, 00);
-        timer = new Timer();
-//        timer.schedule(timerTask, gc.getTime(), 24 * 60 * 60 * 1000);
-        timer.schedule(timerTask, gc.getTime(), 24 * 60 * 60 * 1000);
-//        timer.schedule(timerTask, gc.getTime(), 2 * 60 * 1000);
+        Calendar calendarTomorrow = Calendar.getInstance();
+        calendarTomorrow.add(Calendar.DAY_OF_YEAR, 1);
+        GregorianCalendar gcTomorrow = new GregorianCalendar(calendarTomorrow.get(Calendar.YEAR), calendarTomorrow.get(Calendar.MONTH), calendarTomorrow.get(Calendar.DATE), 00, 00, 01);
+        timerStart = new Timer();
+        timerStart.schedule(timerTaskStart, gcTomorrow.getTime(), 24 * 60 * 60 * 1000);
 
         //------------------------------------------------------------------------------------------
         fusedLocationService = new FusedLocationService(getApplicationContext());
@@ -319,13 +325,8 @@ public class LoggingService extends Service {
     }
 
     private void createTimeline() {
-        if (activityTimeline != null) {
-            activityTimeline.removeAllActivities();
-        }
         activityTimeline = Timeline.getInstance();
-        ActivityBlock defaultBlock = new ActivityBlock(new Task(Task.getDefaultTask().getName()), new Timestamp(System.currentTimeMillis()), Task.getMaxStoppingTime());
-        defaultBlock.setUndefinedEnd(true);
-        activityTimeline.addActivity(defaultBlock);
+        activityTimeline.resetTimeline();
     }
 
     private void startAlarms() {
@@ -648,7 +649,7 @@ public class LoggingService extends Service {
         editor.commit();
         askActivity("No activity");
 
-        Timeline.getInstance().removeAllActivities();
+        Timeline.getInstance().resetTimeline();
 
         fusedLocationService.stop();
 
@@ -739,11 +740,13 @@ public class LoggingService extends Service {
                     Timestamp now = new Timestamp(timestamp);
                     Timestamp end = null;
                     for (ActivityBlock block : activityTimeline.getActivities()) {                  // find the end of this label
+                        Log.d(Constants.TAG, "Now: " + now.toString() + " block begin: " + block.getBegin().toString() + " block end: " + block.getEnd().toString());
                         if ( (now.compareTo(block.getBegin()) >= 0)  && (now.compareTo(block.getEnd()) <= 0) ) {
                             end = new Timestamp(block.getEnd().getTime());
                             break;
                         }
                     }
+
                     ActivityBlock newBlock = new ActivityBlock(new Task(label), now, end);
                     newBlock.setUndefinedEnd(true);
                     activityTimeline.addActivity(newBlock);
