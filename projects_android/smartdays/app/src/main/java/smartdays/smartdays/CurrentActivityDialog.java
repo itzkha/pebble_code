@@ -71,6 +71,16 @@ public class CurrentActivityDialog extends DialogFragment {
         listView.setChoiceMode(AbsListView.CHOICE_MODE_SINGLE);
         listView.setAdapter(adapter);
 
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
+                for (int j = 0; j < listView.getChildCount(); j++) {
+                    listView.getChildAt(j).findViewById(R.id.checkBoxAlone).setVisibility(View.INVISIBLE);
+                }
+                view.findViewById(R.id.checkBoxAlone).setVisibility(View.VISIBLE);
+            }
+        });
+
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         builder.setTitle("Current activity")
                .setView(rootView)
@@ -117,7 +127,8 @@ public class CurrentActivityDialog extends DialogFragment {
                 convertView = inflater.inflate(R.layout.activities_list_row, group, false);
                 holder.name = (TextView) convertView.findViewById(R.id.textActivityLabel);
                 holder.examples = (TextView) convertView.findViewById(R.id.textActivityExamples);
-                //holder.alone = (CheckBox) convertView.findViewById(R.id.checkBoxAlone);
+                holder.alone = (CheckBox) convertView.findViewById(R.id.checkBoxAlone);
+
                 convertView.setTag(holder);
             }
             else {
@@ -127,7 +138,15 @@ public class CurrentActivityDialog extends DialogFragment {
             Task selected = activities.get(position);
             holder.name.setText(selected.getName());
             holder.examples.setText(selected.getExamples());
-            //holder.alone.setChecked(selected.getAlone());
+
+            // Display the alone checkbox only on currently checked activity
+            if (listView.getCheckedItemPosition() == position) {
+                holder.alone.setVisibility(View.VISIBLE);
+                holder.alone.setChecked(false);
+            } else {
+                holder.alone.setVisibility(View.INVISIBLE);
+                holder.alone.setChecked(false);
+            }
 
             return convertView;
         }
@@ -137,6 +156,6 @@ public class CurrentActivityDialog extends DialogFragment {
     static class ViewHolder {
         public TextView name;
         public TextView examples;
-        //public CheckBox alone;
+        public CheckBox alone;
     }
 }
