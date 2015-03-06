@@ -7,6 +7,7 @@ package ch.heig_vd.dailyactivities.model;
 public class Task {
     private String name;
     private String examples;
+    private boolean alone = true;
     private static final Task DEFAULT_TASK = new Task("No Activity");
 
     /**
@@ -16,6 +17,7 @@ public class Task {
     public Task(String name) {
         this.name = name;
         this.examples = "";
+        this.alone = true;
     }
 
     /**
@@ -25,6 +27,7 @@ public class Task {
     public Task(String name, String examples) {
         this.name = name;
         this.examples = examples;
+        this.alone = true;
     }
 
     /**
@@ -41,6 +44,14 @@ public class Task {
      */
     public String getExamples() {
         return examples;
+    }
+
+    public boolean getAlone() {
+        return alone;
+    }
+
+    public void setAlone(boolean alone) {
+        this.alone = alone;
     }
 
     /**
