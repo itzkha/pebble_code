@@ -19,6 +19,7 @@ import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -116,6 +117,7 @@ public class CurrentActivityDialog extends DialogFragment {
                 convertView = inflater.inflate(R.layout.activities_list_row, group, false);
                 holder.name = (TextView) convertView.findViewById(R.id.textActivityLabel);
                 holder.examples = (TextView) convertView.findViewById(R.id.textActivityExamples);
+                //holder.alone = (CheckBox) convertView.findViewById(R.id.checkBoxAlone);
                 convertView.setTag(holder);
             }
             else {
@@ -125,6 +127,7 @@ public class CurrentActivityDialog extends DialogFragment {
             Task selected = activities.get(position);
             holder.name.setText(selected.getName());
             holder.examples.setText(selected.getExamples());
+            //holder.alone.setChecked(selected.getAlone());
 
             return convertView;
         }
@@ -134,5 +137,6 @@ public class CurrentActivityDialog extends DialogFragment {
     static class ViewHolder {
         public TextView name;
         public TextView examples;
+        //public CheckBox alone;
     }
 }

@@ -135,6 +135,7 @@ public class Timeline extends Observable {
             if (currentActivity.getEnd().compareTo(currentActivity.getBegin()) <= 0) {
                 Log.d("Timeline", currentActivity + " is removed (0 length)");
                 iterator.remove();
+                needingWrite = true;
             }
         }
 
@@ -147,6 +148,7 @@ public class Timeline extends Observable {
                 Log.d("Timeline", previous + " and " + block + " are merged.");
                 previous.setEnd(block.getEnd());
                 iterator.remove();
+                needingWrite = true;
             } else {
                 previous = block;
             }

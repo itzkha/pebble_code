@@ -10,7 +10,6 @@ import android.util.Log;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.location.FusedLocationProviderApi;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
@@ -24,7 +23,6 @@ public class FusedLocationService implements LocationListener, GoogleApiClient.C
     private LocationRequest locationRequest;
     private GoogleApiClient googleApiClient;
     private Location location;
-    private FusedLocationProviderApi fusedLocationProviderApi = LocationServices.FusedLocationApi;
 
     public FusedLocationService(Context context) {
         locationRequest = LocationRequest.create();

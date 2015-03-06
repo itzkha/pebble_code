@@ -232,7 +232,7 @@ public class MainActivity extends Activity implements CurrentActivityDialog.Noti
 
     @Override
     protected void onPause() {
-        if (Timeline.getInstance().isNeedingWrite()) {
+        if (LoggingService.isRunning() && Timeline.getInstance().isNeedingWrite()) {
             askService(Constants.UPDATE_ACTIVITY_FILE, "");
         }
         super.onPause();
