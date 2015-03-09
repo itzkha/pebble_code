@@ -13,6 +13,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.TimePicker;
@@ -34,6 +36,7 @@ public class NewActivityFragment extends Fragment {
     private TextView txtFrom;
     private TextView txtTo;
     private Button btnAdd;
+    private CheckBox checkBoxAlone;
 
     public NewActivityFragment() {
     }
@@ -48,6 +51,7 @@ public class NewActivityFragment extends Fragment {
         txtFrom = (TextView) rootView.findViewById(R.id.txt_from);
         txtTo = (TextView) rootView.findViewById(R.id.txt_to);
         btnAdd = (Button) rootView.findViewById(R.id.btn_add_activity);
+        checkBoxAlone = (CheckBox) rootView.findViewById(R.id.checkBoxAlone);
 
         ArrayList<Task> activities = Timeline.getInstance().getAvailableActivities();
         if (activities == null ) {
@@ -58,6 +62,7 @@ public class NewActivityFragment extends Fragment {
         txtFrom.setText(Task.getMinStartingTimeString());
         txtTo.setText(Task.getMaxStoppingTimeString());
         activityBlock = new ActivityBlock(new Task(""), txtFrom.getText().toString(), txtTo.getText().toString());
+        checkBoxAlone.setChecked(true);
 
         // Create an ArrayAdapter using the task array and a default spinner layout
         ArrayAdapter<Task> adapter = new ArrayAdapter(getActivity(), R.layout.spinner_item_activity, activities);
@@ -111,7 +116,9 @@ public class NewActivityFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 if(checkActivityBlock()) {
-                    activityBlock.setTask((Task) (activityName.getSelectedItem()));
+                    Task temp = (Task) activityName.getSelectedItem();
+                    temp.setAlone(checkBoxAlone.isChecked() ? Task.Social.ALONE : Task.Social.WITH_OTHERS );
+                    activityBlock.setTask(temp);
                     activityBlock.setBegin(txtFrom.getText().toString());
                     activityBlock.setEnd(txtTo.getText().toString());
                     Timeline.getInstance().addActivity(activityBlock);
@@ -147,13 +154,16 @@ public class NewActivityFragment extends Fragment {
 
         setFromTime(activityBlock.getStartHour(), activityBlock.getStartMinute());
         setToTime(activityBlock.getEndHour(), activityBlock.getEndMinute());
+        checkBoxAlone.setChecked(activityBlock.getTask().getAlone().compareTo(Task.Social.ALONE) == 0);
 
         getActivity().setTitle("Edit Activity");
         btnAdd.setText("Edit");
         btnAdd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                activityBlock.setTask((Task) (activityName.getSelectedItem()));
+                Task temp = (Task) (activityName.getSelectedItem());
+                temp.setAlone(checkBoxAlone.isChecked() ? Task.Social.ALONE : Task.Social.WITH_OTHERS);
+                activityBlock.setTask(temp);
                 activityBlock.setBegin(txtFrom.getText().toString());
                 activityBlock.setEnd(txtTo.getText().toString());
                 if(!oldActivityBlock.equals(activityBlock)) {

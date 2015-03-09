@@ -20,6 +20,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -45,7 +46,7 @@ public class CurrentActivityDialog extends DialogFragment {
     }
 
     public interface NoticeDialogListener {
-        public void onDialogPositiveClick(String activity);
+        public void onDialogPositiveClick(String activity, Task.Social alone);
     }
     NoticeDialogListener mListener;
 
@@ -63,7 +64,6 @@ public class CurrentActivityDialog extends DialogFragment {
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
 
-//        final ArrayAdapter<Task> adapter = new ArrayAdapter<Task>(getActivity(), R.layout.activities_list_row, R.id.textActivityLabel, activities);
         final LabelAdapter adapter = new LabelAdapter(getActivity(), R.layout.activities_list_row, activities);
 
         final View rootView = getActivity().getLayoutInflater().inflate(R.layout.activities_list, null);
@@ -88,7 +88,7 @@ public class CurrentActivityDialog extends DialogFragment {
                    @Override
                    public void onClick(DialogInterface dialog, int id) {
                        if (listView.getCheckedItemCount() > 0) {
-                           mListener.onDialogPositiveClick((String) listView.getItemAtPosition(listView.getCheckedItemPosition()).toString());
+                           mListener.onDialogPositiveClick(activities.get(listView.getCheckedItemPosition()).getName(), activities.get(listView.getCheckedItemPosition()).getAlone());
                        }
                    }
                })
@@ -121,6 +121,7 @@ public class CurrentActivityDialog extends DialogFragment {
         @Override
         public View getView(int position, View convertView, ViewGroup group) {
             ViewHolder holder;
+            final int currentPosition = position;
             if (convertView == null) {
                 holder = new ViewHolder();
                 inflater = ((Activity) context).getLayoutInflater();
@@ -135,17 +136,23 @@ public class CurrentActivityDialog extends DialogFragment {
                 holder = (ViewHolder) convertView.getTag();
             }
 
-            Task selected = activities.get(position);
-            holder.name.setText(selected.getName());
-            holder.examples.setText(selected.getExamples());
+            final Task current = activities.get(position);
+            holder.name.setText(current.getName());
+            holder.examples.setText(current.getExamples());
+            holder.alone.setChecked(current.getAlone().compareTo(Task.Social.ALONE) == 0);
+            holder.alone.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                    current.setAlone(b ? Task.Social.ALONE : Task.Social.WITH_OTHERS);
+                }
+            });
 
             // Display the alone checkbox only on currently checked activity
             if (listView.getCheckedItemPosition() == position) {
                 holder.alone.setVisibility(View.VISIBLE);
-                holder.alone.setChecked(false);
-            } else {
+            }
+            else {
                 holder.alone.setVisibility(View.INVISIBLE);
-                holder.alone.setChecked(false);
             }
 
             return convertView;

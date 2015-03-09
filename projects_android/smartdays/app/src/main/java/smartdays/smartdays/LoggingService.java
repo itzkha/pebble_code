@@ -143,7 +143,7 @@ public class LoggingService extends Service {
                 startLoggers(false);
                 startAlarms();
 
-                logLabel(settings.getString("currentActivity", Task.getDefaultTask().getName()), Constants.ACTIVITY_LABEL_COMMAND);
+                logActivity(settings.getString("currentActivity", Task.getDefaultTask().getName()), Task.Social.valueOf(settings.getString("currentAlone", Task.Social.NA.toString())));
             }
         };
         Calendar calendarTomorrow = Calendar.getInstance();
@@ -192,13 +192,13 @@ public class LoggingService extends Service {
                     case Constants.ACTIVITY_LABEL_COMMAND:
                         label = data.getString(Constants.LABEL_KEY);
                         Log.d(Constants.TAG, "Received activity label: " + label);
-                        logLabel(label, command);
+                        logActivity(label, Task.Social.NA);
                         askActivity(label);
                         break;
                     case Constants.MOOD_LABEL_COMMAND:
                         label = data.getString(Constants.LABEL_KEY);
                         Log.d(Constants.TAG, "Received mood label: " + label);
-                        logLabel(label, command);
+                        logMood(label);
                         break;
                 }
                 PebbleKit.sendAckToPebble(getApplicationContext(), transactionId);
@@ -308,7 +308,7 @@ public class LoggingService extends Service {
 
                 switch (msg.what) {
                     case Constants.ACTIVITY_LABEL_COMMAND:
-                        logLabel(msg.obj.toString(), Constants.ACTIVITY_LABEL_COMMAND);
+                        logActivity(msg.obj.toString(), Task.Social.values()[msg.arg1]);
                         break;
                     case Constants.UPDATE_ACTIVITY_FILE:
                         writeActivitiesToFile();
@@ -617,6 +617,8 @@ public class LoggingService extends Service {
             for (ActivityBlock block : activities) {
                 bufferOutLabelActivity.write(block.getTask().getName().getBytes());
                 bufferOutLabelActivity.write(",".getBytes());
+                bufferOutLabelActivity.write(block.getTask().getAlone().toString().getBytes());
+                bufferOutLabelActivity.write(",".getBytes());
                 bufferOutLabelActivity.write(String.valueOf(block.getBegin().getTime()).getBytes());
                 bufferOutLabelActivity.write("\n".getBytes());
             }
@@ -646,6 +648,7 @@ public class LoggingService extends Service {
         askActivity(Constants.NEW_FILES_COMMAND);
 
         editor.putString("currentActivity", "No activity");
+        editor.putString("currentAlone", Task.Social.NA.toString());
         editor.commit();
         askActivity("No activity");
 
@@ -726,44 +729,44 @@ public class LoggingService extends Service {
         }
     }
 
-    private void logLabel(String label, int command) {
-        try {
-            long timestamp = System.currentTimeMillis();
-            String line = label.concat("," + timestamp);
+    private void logActivity(String label, Task.Social alone) {
 
-            switch (command) {
-                case Constants.ACTIVITY_LABEL_COMMAND:
-                    SharedPreferences.Editor editor = settings.edit();
-                    editor.putString("currentActivity", label);
-                    editor.commit();
+        SharedPreferences.Editor editor = settings.edit();
+        editor.putString("currentActivity", label);
+        editor.putString("currentAlone", alone.toString());
+        editor.commit();
 
-                    Timestamp now = new Timestamp(timestamp);
-                    Timestamp end = null;
-                    for (ActivityBlock block : activityTimeline.getActivities()) {                  // find the end of this label
-                        Log.d(Constants.TAG, "Now: " + now.toString() + " block begin: " + block.getBegin().toString() + " block end: " + block.getEnd().toString());
-                        if ( (now.compareTo(block.getBegin()) >= 0)  && (now.compareTo(block.getEnd()) <= 0) ) {
-                            end = new Timestamp(block.getEnd().getTime());
-                            break;
-                        }
-                    }
-
-                    ActivityBlock newBlock = new ActivityBlock(new Task(label), now, end);
-                    newBlock.setUndefinedEnd(true);
-                    activityTimeline.addActivity(newBlock);
-                    activityLabelCounter = 0;
-                    writeActivitiesToFile();
-                    break;
-
-                case Constants.MOOD_LABEL_COMMAND:
-                    bufferOutLabelMood.write(line.getBytes());
-                    bufferOutLabelMood.flush();
-                    moodLabelCounter = 0;
-                    break;
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        Timestamp end = null;
+        for (ActivityBlock block : activityTimeline.getActivities()) {                  // find the end of this label
+            Log.d(Constants.TAG, "Now: " + now.toString() + " block begin: " + block.getBegin().toString() + " block end: " + block.getEnd().toString());
+            if ( (now.compareTo(block.getBegin()) >= 0)  && (now.compareTo(block.getEnd()) <= 0) ) {
+                end = new Timestamp(block.getEnd().getTime());
+                break;
             }
+        }
 
+        if (end != null) {
+            Task temp = new Task(label);
+            temp.setAlone(alone);
+            ActivityBlock newBlock = new ActivityBlock(temp, now, end);
+            newBlock.setUndefinedEnd(true);
+            activityTimeline.addActivity(newBlock);
+            activityLabelCounter = 0;
+            writeActivitiesToFile();
         }
-        catch (IOException ioe) {
+    }
+
+    private void logMood(String label) {
+        long timestamp = System.currentTimeMillis();
+        String line = label.concat("," + timestamp);
+
+        try {
+            bufferOutLabelMood.write(line.getBytes());
+            bufferOutLabelMood.flush();
+            moodLabelCounter = 0;
         }
+        catch (IOException ioe) {}
     }
 
 }

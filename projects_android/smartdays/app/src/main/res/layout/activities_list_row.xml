@@ -27,7 +27,7 @@
             android:background="#00ffffff"
             android:text="alone"
             android:id="@+id/checkBoxAlone"
-            android:checked="false"
+            android:checked="true"
             android:focusable="false"
             android:focusableInTouchMode="false"/>
     </LinearLayout>

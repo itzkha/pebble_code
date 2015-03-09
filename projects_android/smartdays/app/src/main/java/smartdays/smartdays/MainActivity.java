@@ -58,7 +58,7 @@ public class MainActivity extends Activity implements CurrentActivityDialog.Noti
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        //show error dialog if GoolglePlayServices not available
+        //show error dialog if GooglePlayServices not available
         if (!isGooglePlayServicesAvailable()) {
             finish();
         }
@@ -140,7 +140,7 @@ public class MainActivity extends Activity implements CurrentActivityDialog.Noti
         });
         buttonStop.setOnLongClickListener(new View.OnLongClickListener() {
             public boolean onLongClick(View v) {
-                askService(Constants.STOP_COMMAND, "");
+                askService(Constants.STOP_COMMAND, "", Task.Social.NA);
                 return true;
             }
         });
@@ -233,7 +233,7 @@ public class MainActivity extends Activity implements CurrentActivityDialog.Noti
     @Override
     protected void onPause() {
         if (LoggingService.isRunning() && Timeline.getInstance().isNeedingWrite()) {
-            askService(Constants.UPDATE_ACTIVITY_FILE, "");
+            askService(Constants.UPDATE_ACTIVITY_FILE, "", Task.Social.NA);
         }
         super.onPause();
     }
@@ -255,11 +255,12 @@ public class MainActivity extends Activity implements CurrentActivityDialog.Noti
         }
     }
 
-    private boolean askService(int command, String text) {
+    private boolean askService(int command, String text, Task.Social alone) {
         if(LoggingService.serviceMessagesHandler != null) {
             Message msg = Message.obtain();
             msg.what = command;
             msg.obj = text;
+            msg.arg1 = alone.ordinal();
             LoggingService.serviceMessagesHandler.sendMessage(msg);
             return true;
         }
@@ -270,8 +271,8 @@ public class MainActivity extends Activity implements CurrentActivityDialog.Noti
     }
 
     @Override
-    public void onDialogPositiveClick(String activity) {
-        if (askService(Constants.ACTIVITY_LABEL_COMMAND, activity)) {
+    public void onDialogPositiveClick(String activity, Task.Social alone) {
+        if (askService(Constants.ACTIVITY_LABEL_COMMAND, activity, alone)) {
             ((Button)findViewById(R.id.buttonChangeCurrentActivity)).setText(activity);
         }
     }

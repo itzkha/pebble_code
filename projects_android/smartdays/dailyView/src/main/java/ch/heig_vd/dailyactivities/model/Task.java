@@ -7,10 +7,13 @@ import java.sql.Timestamp;
  * The only change is to compare the string in a case insensitive manner.
  */
 public class Task {
+    public enum Social {ALONE, WITH_OTHERS, NA}
+
     private String name;
     private String examples;
-    private boolean alone = true;
+    private Social alone = Social.NA;
     private static final Task DEFAULT_TASK = new Task("No Activity");
+
 
     /**
      * Creates a new activity from a name.
@@ -19,7 +22,7 @@ public class Task {
     public Task(String name) {
         this.name = name;
         this.examples = "";
-        this.alone = true;
+        this.alone = Social.NA;
     }
 
     /**
@@ -29,7 +32,7 @@ public class Task {
     public Task(String name, String examples) {
         this.name = name;
         this.examples = examples;
-        this.alone = true;
+        this.alone = Social.NA;
     }
 
     /**
@@ -48,11 +51,11 @@ public class Task {
         return examples;
     }
 
-    public boolean getAlone() {
+    public Social getAlone() {
         return alone;
     }
 
-    public void setAlone(boolean alone) {
+    public void setAlone(Social alone) {
         this.alone = alone;
     }
 
@@ -66,7 +69,7 @@ public class Task {
         if(o == null) {
             return false;
         } else if(o.getClass() == Task.class) {
-            return ((Task)o).name.toLowerCase().equals(name.toLowerCase());
+            return ((Task)o).name.concat(String.valueOf(((Task) o).getAlone())).toLowerCase().equals(name.concat(String.valueOf(alone)).toLowerCase());
         }
         return super.equals(o);
     }
@@ -103,4 +106,5 @@ public class Task {
     public String toString() {
         return name;
     }
+
 }
