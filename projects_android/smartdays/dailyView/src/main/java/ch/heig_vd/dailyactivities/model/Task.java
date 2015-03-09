@@ -11,8 +11,8 @@ public class Task {
 
     private String name;
     private String examples;
-    private Social alone = Social.NA;
-    private static final Task DEFAULT_TASK = new Task("No Activity");
+    private Social social = Social.NA;
+    private static final Task DEFAULT_TASK = new Task("No activity");
 
 
     /**
@@ -22,7 +22,7 @@ public class Task {
     public Task(String name) {
         this.name = name;
         this.examples = "";
-        this.alone = Social.NA;
+        this.social = Social.NA;
     }
 
     /**
@@ -32,7 +32,7 @@ public class Task {
     public Task(String name, String examples) {
         this.name = name;
         this.examples = examples;
-        this.alone = Social.NA;
+        this.social = Social.NA;
     }
 
     /**
@@ -51,12 +51,12 @@ public class Task {
         return examples;
     }
 
-    public Social getAlone() {
-        return alone;
+    public Social getSocial() {
+        return social;
     }
 
-    public void setAlone(Social alone) {
-        this.alone = alone;
+    public void setSocial(Social social) {
+        this.social = social;
     }
 
     /**
@@ -69,7 +69,7 @@ public class Task {
         if(o == null) {
             return false;
         } else if(o.getClass() == Task.class) {
-            return ((Task)o).name.concat(String.valueOf(((Task) o).getAlone())).toLowerCase().equals(name.concat(String.valueOf(alone)).toLowerCase());
+            return ((Task)o).name.concat(String.valueOf(((Task) o).getSocial())).toLowerCase().equals(name.concat(String.valueOf(social)).toLowerCase());
         }
         return super.equals(o);
     }

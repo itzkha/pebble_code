@@ -21,15 +21,11 @@
             android:minHeight="?android:attr/listPreferredItemHeightSmall"
             android:layout_weight="1" />
 
-        <CheckBox
-            android:layout_width="100dp"
-            android:layout_height="fill_parent"
-            android:background="#00ffffff"
-            android:text="alone"
-            android:id="@+id/checkBoxAlone"
-            android:checked="true"
-            android:focusable="false"
-            android:focusableInTouchMode="false"/>
+        <Spinner
+            android:layout_width="150dp"
+            android:layout_height="wrap_content"
+            android:id="@+id/spinnerSocial"
+            android:spinnerMode="dropdown" />
 
     </LinearLayout>
 

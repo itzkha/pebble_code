@@ -36,6 +36,13 @@
         android:paddingRight="16dp"
         android:layout_weight="1"
         style="@android:style/TextAppearance.Large"/>
+
+    <ImageView
+        android:layout_width="50dp"
+        android:layout_height="45dp"
+        android:id="@+id/imageViewSocial"
+        android:padding="2dp" />
+
     <ImageView
         android:id="@+id/edit_image"
         android:layout_width="wrap_content"
@@ -43,4 +50,5 @@
         android:src="@android:drawable/ic_menu_edit"
         android:padding="2dp"
         android:contentDescription="@string/img_edit_description"/>
+
 </LinearLayout>
