@@ -67,6 +67,7 @@ static bool must_send = false;
 
 static Window *s_social_window;
 static MenuLayer *s_menu_social_layer;
+static GBitmap *social_icons[2];
 
 static Window *s_mood_window;
 static MenuLayer *s_menu_mood_layer;
@@ -341,10 +342,10 @@ static void menu_social_draw_row_callback(GContext* ctx, const Layer *cell_layer
   // Use the row to specify which item we'll draw
   switch (cell_index->row) {
     case 0:
-      menu_cell_basic_draw(ctx, cell_layer, "I am alone", NULL, NULL);
+      menu_cell_basic_draw(ctx, cell_layer, "Alone", NULL, social_icons[cell_index->row]);
       break;
     case 1:
-      menu_cell_basic_draw(ctx, cell_layer, "I am with others", NULL, NULL);
+      menu_cell_basic_draw(ctx, cell_layer, "With others", NULL, social_icons[cell_index->row]);
       break;
   }
 }
@@ -658,6 +659,9 @@ static void activity_window_unload(Window *window) {
 static void social_window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   GRect window_bounds = layer_get_bounds(window_layer);
+  
+  social_icons[0] = gbitmap_create_with_resource(RESOURCE_ID_ALONE);
+  social_icons[1] = gbitmap_create_with_resource(RESOURCE_ID_WITHOTHERS);
 
   // Create MenuLayer
   s_menu_social_layer = menu_layer_create(GRect(0, 0, window_bounds.size.w, window_bounds.size.h));
@@ -676,6 +680,9 @@ static void social_window_load(Window *window) {
 }
 
 static void social_window_unload(Window *window) {
+  gbitmap_destroy(mood_icons[0]);
+  gbitmap_destroy(mood_icons[1]);
+
   menu_layer_destroy(s_menu_social_layer);
 }
 
