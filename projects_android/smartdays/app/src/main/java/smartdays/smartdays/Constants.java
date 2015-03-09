@@ -24,6 +24,7 @@ public class Constants {
     public static final int LABEL_KEY = 0xf00d50da;
     public static final int TIMESTAMP_KEY = 0xdeadbeef;
     public static final int COMMAND_KEY = 0xcafebabe;
+    public static final int SOCIAL_KEY = 0xc0cac01a;
     public static final int START_COMMAND = 5;
     public static final int STOP_COMMAND = 12;
     public static final int TIMESTAMP_COMMAND = 17;

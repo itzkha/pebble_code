@@ -7,6 +7,7 @@
 
 #define TIMESTAMP_KEY 0xdeadbeef
 #define LABEL_KEY 0xf00d50da
+#define SOCIAL_KEY 0xc0cac01a
 
 #define COMMAND_KEY 0xcafebabe
 #define START_COMMAND 5
@@ -61,6 +62,11 @@ static char* menu_activity_subs[MAX_MENU_ITEMS_ACTIVITY] =
             "gym, skiing, biking, hiking",
             "day-job, work-related",
             NULL};
+static char current_activity[20];
+static bool must_send = false;
+
+static Window *s_social_window;
+static MenuLayer *s_menu_social_layer;
 
 static Window *s_mood_window;
 static MenuLayer *s_menu_mood_layer;
@@ -88,7 +94,8 @@ static int current_command;
 static bool error_flag = false;
 
 void send_command(int command);
-void send_label(char* label, int command);
+void send_activity(char* label, char* social);
+void send_mood(char* label);
 
 
 //------------------------------------------------------------------------------------------------- Communication with the background worker
@@ -182,7 +189,7 @@ static void stop_worker() {
 }
 
 
-//-------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------- Main menu
 // A callback is used to specify the amount of sections of menu items
 // With this, you can dynamically add and remove sections
 static uint16_t menu_get_num_sections_callback(MenuLayer *menu_layer, void *data) {
@@ -238,7 +245,8 @@ void menu_select_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *da
       break;
   }
 }
-//-------------------------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------------------------- Activities menu
 // A callback is used to specify the amount of sections of menu items
 // With this, you can dynamically add and remove sections
 static uint16_t menu_activity_get_num_sections_callback(MenuLayer *menu_layer, void *data) {
@@ -291,10 +299,79 @@ void menu_activity_select_callback(MenuLayer *menu_layer, MenuIndex *cell_index,
   s_ticks = 0;
 
   text_layer_set_text(s_status_layer, "Thank you!" );
-  send_label(menu_activity_items[cell_index->row], ACTIVITY_LABEL_COMMAND);
+  //send_label(menu_activity_items[cell_index->row], ACTIVITY_LABEL_COMMAND);
+  strcpy(current_activity, menu_activity_items[cell_index->row]);
+  must_send = true;
+  window_stack_pop(true);
+  window_stack_push(s_social_window, true);
+}
+
+//------------------------------------------------------------------------------------------------- Social menu
+// A callback is used to specify the amount of sections of menu items
+// With this, you can dynamically add and remove sections
+static uint16_t menu_social_get_num_sections_callback(MenuLayer *menu_layer, void *data) {
+  return 1;
+}
+
+// Each section has a number of items;  we use a callback to specify this
+// You can also dynamically add and remove items using this
+static uint16_t menu_social_get_num_rows_callback(MenuLayer *menu_layer, uint16_t section_index, void *data) {
+  return 2;
+}
+
+// A callback is used to specify the height of the section header
+static int16_t menu_social_get_cell_height_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *callback_context) {
+  // This is a define provided in pebble.h that you may use for the default height
+  return 56;
+}
+
+// A callback is used to specify the height of the section header
+static int16_t menu_social_get_header_height_callback(MenuLayer *menu_layer, uint16_t section_index, void *data) {
+  // This is a define provided in pebble.h that you may use for the default height
+  return MENU_CELL_BASIC_HEADER_HEIGHT;
+}
+
+// Here we draw what each header is
+static void menu_social_draw_header_callback(GContext* ctx, const Layer *cell_layer, uint16_t section_index, void *data) {
+  menu_cell_basic_header_draw(ctx, cell_layer, "Are you with someone?");
+}
+
+// This is the menu item draw callback where you specify what each item should look like
+static void menu_social_draw_row_callback(GContext* ctx, const Layer *cell_layer, MenuIndex *cell_index, void *data) {
+  // Use the row to specify which item we'll draw
+  switch (cell_index->row) {
+    case 0:
+      menu_cell_basic_draw(ctx, cell_layer, "I am alone", NULL, NULL);
+      break;
+    case 1:
+      menu_cell_basic_draw(ctx, cell_layer, "I am with others", NULL, NULL);
+      break;
+  }
+}
+
+void menu_social_selection_changed_callback(MenuLayer *menu_layer, MenuIndex new_index, MenuIndex old_index, void *data) {
+  s_ticks = 0;
+}
+
+// Here we capture when a user selects a menu item
+void menu_social_select_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *data) {
+  // Use the row to specify which item will receive the select action
+  s_ticks = 0;
+
+  text_layer_set_text(s_status_layer, "Thank you!" );
+
+  switch (cell_index->row) {
+    case 0:
+      send_activity(current_activity, "ALONE");
+      break;
+    case 1:
+      send_activity(current_activity, "WITH_OTHERS");
+      break;
+  }
   window_stack_pop(true);
 }
-//-------------------------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------------------------- Mood menu
 // A callback is used to specify the amount of sections of menu items
 // With this, you can dynamically add and remove sections
 static uint16_t menu_mood_get_num_sections_callback(MenuLayer *menu_layer, void *data) {
@@ -340,7 +417,7 @@ void menu_mood_select_callback(MenuLayer *menu_layer, MenuIndex *cell_index, voi
   s_ticks = 0;
 
   text_layer_set_text(s_status_layer, "Thank you!" );
-  send_label(menu_mood_items[cell_index->row], MOOD_LABEL_COMMAND);
+  send_mood(menu_mood_items[cell_index->row]);
   window_stack_pop(true);
 }
 
@@ -364,8 +441,19 @@ void send_command(int command) {
   app_message_outbox_send();
 }
 
-void send_label(char* label, int command) {
-  current_command = command;
+void send_activity(char* label, char* social) {
+  must_send = false;
+  current_command = ACTIVITY_LABEL_COMMAND;
+  app_message_outbox_begin(&p_iter);
+  dict_write_int8(p_iter, COMMAND_KEY, current_command);
+  dict_write_cstring(p_iter, LABEL_KEY, label);
+  dict_write_cstring(p_iter, SOCIAL_KEY, social);
+  app_message_outbox_send();
+  strcpy(current_activity, "NA");
+}
+
+void send_mood(char* label) {
+  current_command = MOOD_LABEL_COMMAND;
   app_message_outbox_begin(&p_iter);
   dict_write_int8(p_iter, COMMAND_KEY, current_command);
   dict_write_cstring(p_iter, LABEL_KEY, label);
@@ -478,8 +566,13 @@ static void tick_handler(struct tm *tick_timer, TimeUnits units_changed) {
   s_ticks++;
 
   if (s_ticks > MAX_TIME_WITHOUT_USER) {
-    window_stack_pop_all(true);
-    s_ticks = 0;
+    if (must_send) {
+      send_activity(current_activity, "NA");
+    }
+    else {
+      window_stack_pop_all(true);
+      s_ticks = 0;
+    }
   }
 }
 //------------------------------------------------------------------------------------------------- Mandatory structure - init - deinit
@@ -526,7 +619,6 @@ static void main_window_load(Window *window) {
   });
   menu_layer_set_click_config_onto_window(s_menu_layer, window);
   layer_add_child(window_layer, menu_layer_get_layer(s_menu_layer));
-  
 }
 
 static void main_window_unload(Window *window) {
@@ -557,11 +649,34 @@ static void activity_window_load(Window *window) {
   });
   menu_layer_set_click_config_onto_window(s_menu_activity_layer, window);
   layer_add_child(window_layer, menu_layer_get_layer(s_menu_activity_layer));
-  
 }
 
 static void activity_window_unload(Window *window) {
   menu_layer_destroy(s_menu_activity_layer);
+}
+
+static void social_window_load(Window *window) {
+  Layer *window_layer = window_get_root_layer(window);
+  GRect window_bounds = layer_get_bounds(window_layer);
+
+  // Create MenuLayer
+  s_menu_social_layer = menu_layer_create(GRect(0, 0, window_bounds.size.w, window_bounds.size.h));
+  menu_layer_set_callbacks(s_menu_social_layer, NULL, (MenuLayerCallbacks){
+    .get_num_sections = menu_social_get_num_sections_callback,
+    .get_num_rows = menu_social_get_num_rows_callback,
+    .get_cell_height = menu_social_get_cell_height_callback,
+    .get_header_height = menu_social_get_header_height_callback,
+    .draw_header = menu_social_draw_header_callback,
+    .draw_row = menu_social_draw_row_callback,
+    .selection_changed = menu_social_selection_changed_callback,
+    .select_click = menu_social_select_callback
+  });
+  menu_layer_set_click_config_onto_window(s_menu_social_layer, window);
+  layer_add_child(window_layer, menu_layer_get_layer(s_menu_social_layer));
+}
+
+static void social_window_unload(Window *window) {
+  menu_layer_destroy(s_menu_social_layer);
 }
 
 static void mood_window_load(Window *window) {
@@ -586,13 +701,11 @@ static void mood_window_load(Window *window) {
     .get_header_height = menu_mood_get_header_height_callback,
     .draw_header = menu_mood_draw_header_callback,
     .draw_row = menu_mood_draw_row_callback,
-    //.get_separator_height = menu_mood_get_separator_height,
     .selection_changed = menu_mood_selection_changed_callback,
     .select_click = menu_mood_select_callback
   });
   menu_layer_set_click_config_onto_window(s_menu_mood_layer, window);
   layer_add_child(window_layer, menu_layer_get_layer(s_menu_mood_layer));
-  
 }
 
 static void mood_window_unload(Window *window) {
@@ -606,6 +719,7 @@ static void mood_window_unload(Window *window) {
 }
 
 static void init() {
+  strcpy(current_activity, "NA");
 
   // Register callbacks
   app_message_register_inbox_received(inbox_received_callback);
@@ -629,6 +743,13 @@ static void init() {
   window_set_window_handlers(s_activity_window, (WindowHandlers) {
     .load = activity_window_load,
     .unload = activity_window_unload
+  });
+
+  // Create social labels window
+  s_social_window = window_create();
+  window_set_window_handlers(s_social_window, (WindowHandlers) {
+    .load = social_window_load,
+    .unload = social_window_unload
   });
 
   // Create mood labels window
@@ -656,6 +777,8 @@ static void deinit() {
   window_destroy(s_main_window);
   // Destroy activity Window
   window_destroy(s_activity_window);
+  // Destroy social Window
+  window_destroy(s_social_window);
   // Destroy mood Window
   window_destroy(s_mood_window);
 

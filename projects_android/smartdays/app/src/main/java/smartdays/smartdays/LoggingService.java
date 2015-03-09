@@ -177,6 +177,7 @@ public class LoggingService extends Service {
                 int command = data.getInteger(Constants.COMMAND_KEY).intValue();
                 Log.d(Constants.TAG, "Receiving command: " + String.valueOf(command));
                 String label;
+                String social;
                 switch (command) {
                     case Constants.TIMESTAMP_COMMAND:
                         Log.d(Constants.TAG, "TIMESTAMP received");
@@ -191,8 +192,9 @@ public class LoggingService extends Service {
                         break;
                     case Constants.ACTIVITY_LABEL_COMMAND:
                         label = data.getString(Constants.LABEL_KEY);
-                        Log.d(Constants.TAG, "Received activity label: " + label);
-                        logActivity(label, Task.Social.NA);
+                        social = data.getString(Constants.SOCIAL_KEY);
+                        Log.d(Constants.TAG, "Received activity label: " + label + " " + social);
+                        logActivity(label, Task.Social.valueOf(social));
                         askActivity(label);
                         break;
                     case Constants.MOOD_LABEL_COMMAND:

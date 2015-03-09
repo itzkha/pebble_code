@@ -142,7 +142,7 @@ public class NewActivityFragment extends Fragment {
         boolean found = false;
         int max = activityName.getAdapter().getCount();
         for(int i = 0; i < max; i++) {
-            if(activityName.getItemAtPosition(i).equals(activityBlock.getTask())) {
+            if(activityName.getItemAtPosition(i).toString().equals(activityBlock.getTask().toString())) {
                 activityName.setSelection(i);
                 found = true;
             }
