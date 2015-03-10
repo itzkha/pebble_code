@@ -11,7 +11,7 @@ public class Task {
 
     private String name;
     private String examples;
-    private Social social = Social.NA;
+    private Social social = Social.ALONE;
     private static final Task DEFAULT_TASK = new Task("No activity");
 
 
@@ -22,7 +22,7 @@ public class Task {
     public Task(String name) {
         this.name = name;
         this.examples = "";
-        this.social = Social.NA;
+        this.social = Social.ALONE;
     }
 
     /**
@@ -32,7 +32,7 @@ public class Task {
     public Task(String name, String examples) {
         this.name = name;
         this.examples = examples;
-        this.social = Social.NA;
+        this.social = Social.ALONE;
     }
 
     /**
