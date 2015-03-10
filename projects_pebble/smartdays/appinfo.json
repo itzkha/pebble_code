@@ -52,6 +52,16 @@
         "type": "png",
         "name": "UPSET",
         "file": "upset_pulse_32x32.png"
+      },
+      {
+        "type": "png",
+        "name": "ALONE",
+        "file": "socialAlone.png"
+      },
+      {
+        "type": "png",
+        "name": "WITHOTHERS",
+        "file": "socialWithOthers.png"
       }
     ]
   }

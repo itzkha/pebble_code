@@ -619,7 +619,7 @@ public class LoggingService extends Service {
             for (ActivityBlock block : activities) {
                 bufferOutLabelActivity.write(block.getTask().getName().getBytes());
                 bufferOutLabelActivity.write(",".getBytes());
-                bufferOutLabelActivity.write(block.getTask().getAlone().toString().getBytes());
+                bufferOutLabelActivity.write(block.getTask().getSocial().toString().getBytes());
                 bufferOutLabelActivity.write(",".getBytes());
                 bufferOutLabelActivity.write(String.valueOf(block.getBegin().getTime()).getBytes());
                 bufferOutLabelActivity.write("\n".getBytes());
@@ -750,7 +750,7 @@ public class LoggingService extends Service {
 
         if (end != null) {
             Task temp = new Task(label);
-            temp.setAlone(alone);
+            temp.setSocial(alone);
             ActivityBlock newBlock = new ActivityBlock(temp, now, end);
             newBlock.setUndefinedEnd(true);
             activityTimeline.addActivity(newBlock);

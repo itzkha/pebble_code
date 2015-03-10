@@ -7,30 +7,18 @@ import android.app.DialogFragment;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
-import android.util.Log;
-import android.view.ActionMode;
 import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.CompoundButton;
-import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
 
-import ch.heig_vd.dailyactivities.model.ActivityBlock;
 import ch.heig_vd.dailyactivities.model.Task;
 
 /**
@@ -46,7 +34,7 @@ public class CurrentActivityDialog extends DialogFragment {
     }
 
     public interface NoticeDialogListener {
-        public void onDialogPositiveClick(String activity, Task.Social alone);
+        public void onDialogPositiveClick(String activity, Task.Social social);
     }
     NoticeDialogListener mListener;
 
@@ -75,9 +63,9 @@ public class CurrentActivityDialog extends DialogFragment {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
                 for (int j = 0; j < listView.getChildCount(); j++) {
-                    listView.getChildAt(j).findViewById(R.id.checkBoxAlone).setVisibility(View.INVISIBLE);
+                    listView.getChildAt(j).findViewById(R.id.spinnerSocial).setVisibility(View.INVISIBLE);
                 }
-                view.findViewById(R.id.checkBoxAlone).setVisibility(View.VISIBLE);
+                view.findViewById(R.id.spinnerSocial).setVisibility(View.VISIBLE);
             }
         });
 
@@ -88,7 +76,7 @@ public class CurrentActivityDialog extends DialogFragment {
                    @Override
                    public void onClick(DialogInterface dialog, int id) {
                        if (listView.getCheckedItemCount() > 0) {
-                           mListener.onDialogPositiveClick(activities.get(listView.getCheckedItemPosition()).getName(), activities.get(listView.getCheckedItemPosition()).getAlone());
+                           mListener.onDialogPositiveClick(activities.get(listView.getCheckedItemPosition()).getName(), activities.get(listView.getCheckedItemPosition()).getSocial());
                        }
                    }
                })
@@ -121,15 +109,13 @@ public class CurrentActivityDialog extends DialogFragment {
         @Override
         public View getView(int position, View convertView, ViewGroup group) {
             ViewHolder holder;
-            final int currentPosition = position;
             if (convertView == null) {
                 holder = new ViewHolder();
                 inflater = ((Activity) context).getLayoutInflater();
                 convertView = inflater.inflate(R.layout.activities_list_row, group, false);
                 holder.name = (TextView) convertView.findViewById(R.id.textActivityLabel);
                 holder.examples = (TextView) convertView.findViewById(R.id.textActivityExamples);
-                holder.alone = (CheckBox) convertView.findViewById(R.id.checkBoxAlone);
-
+                holder.social = (Spinner) convertView.findViewById(R.id.spinnerSocial);
                 convertView.setTag(holder);
             }
             else {
@@ -139,20 +125,32 @@ public class CurrentActivityDialog extends DialogFragment {
             final Task current = activities.get(position);
             holder.name.setText(current.getName());
             holder.examples.setText(current.getExamples());
-            holder.alone.setChecked(current.getAlone().compareTo(Task.Social.ALONE) == 0);
-            holder.alone.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+
+            ArrayList<String> socialArray = new ArrayList<String>(3);
+            socialArray.add("Alone");
+            socialArray.add("With others");
+            socialArray.add("NA");
+            ArrayAdapter<Task.Social> adapterSocial = new ArrayAdapter(getActivity(), R.layout.spinner_item_social_small, socialArray);
+            adapterSocial.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            holder.social.setAdapter(adapterSocial);
+            holder.social.setSelection(current.getSocial().ordinal());
+            holder.social.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                 @Override
-                public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                    current.setAlone(b ? Task.Social.ALONE : Task.Social.WITH_OTHERS);
+                public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                    current.setSocial(Task.Social.values()[i]);
+                }
+                @Override
+                public void onNothingSelected(AdapterView<?> adapterView) {
+                    current.setSocial(Task.Social.NA);
                 }
             });
 
-            // Display the alone checkbox only on currently checked activity
+            // Display the alone spinner only on currently checked activity
             if (listView.getCheckedItemPosition() == position) {
-                holder.alone.setVisibility(View.VISIBLE);
+                holder.social.setVisibility(View.VISIBLE);
             }
             else {
-                holder.alone.setVisibility(View.INVISIBLE);
+                holder.social.setVisibility(View.INVISIBLE);
             }
 
             return convertView;
@@ -163,6 +161,6 @@ public class CurrentActivityDialog extends DialogFragment {
     static class ViewHolder {
         public TextView name;
         public TextView examples;
-        public CheckBox alone;
+        public Spinner social;
     }
 }

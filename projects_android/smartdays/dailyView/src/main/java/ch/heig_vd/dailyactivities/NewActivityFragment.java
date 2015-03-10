@@ -1,6 +1,5 @@
 package ch.heig_vd.dailyactivities;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.TimePickerDialog;
 import android.content.DialogInterface;
@@ -13,8 +12,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.CompoundButton;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.TimePicker;
@@ -36,7 +33,7 @@ public class NewActivityFragment extends Fragment {
     private TextView txtFrom;
     private TextView txtTo;
     private Button btnAdd;
-    private CheckBox checkBoxAlone;
+    private Spinner spinnerSocial;
 
     public NewActivityFragment() {
     }
@@ -51,7 +48,7 @@ public class NewActivityFragment extends Fragment {
         txtFrom = (TextView) rootView.findViewById(R.id.txt_from);
         txtTo = (TextView) rootView.findViewById(R.id.txt_to);
         btnAdd = (Button) rootView.findViewById(R.id.btn_add_activity);
-        checkBoxAlone = (CheckBox) rootView.findViewById(R.id.checkBoxAlone);
+        spinnerSocial = (Spinner) rootView.findViewById(R.id.spinnerSocial);
 
         ArrayList<Task> activities = Timeline.getInstance().getAvailableActivities();
         if (activities == null ) {
@@ -62,15 +59,21 @@ public class NewActivityFragment extends Fragment {
         txtFrom.setText(Task.getMinStartingTimeString());
         txtTo.setText(Task.getMaxStoppingTimeString());
         activityBlock = new ActivityBlock(new Task(""), txtFrom.getText().toString(), txtTo.getText().toString());
-        checkBoxAlone.setChecked(true);
 
         // Create an ArrayAdapter using the task array and a default spinner layout
         ArrayAdapter<Task> adapter = new ArrayAdapter(getActivity(), R.layout.spinner_item_activity, activities);
-
         // Specify the layout to use when the list of choices appears
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         // Apply the adapter to the spinner
         activityName.setAdapter(adapter);
+
+        ArrayList<String> socialArray = new ArrayList<String>(3);
+        socialArray.add("Alone");
+        socialArray.add("With others");
+        socialArray.add("NA");
+        ArrayAdapter<Task.Social> adapterSocial = new ArrayAdapter(getActivity(), R.layout.spinner_item_social_large, socialArray);
+        adapterSocial.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerSocial.setAdapter(adapterSocial);
 
         final TimePickerDialog.OnTimeSetListener timePickerListener =
                 new TimePickerDialog.OnTimeSetListener() {
@@ -117,7 +120,7 @@ public class NewActivityFragment extends Fragment {
             public void onClick(View v) {
                 if(checkActivityBlock()) {
                     Task temp = (Task) activityName.getSelectedItem();
-                    temp.setAlone(checkBoxAlone.isChecked() ? Task.Social.ALONE : Task.Social.WITH_OTHERS );
+                    temp.setSocial(Task.Social.values()[spinnerSocial.getSelectedItemPosition()]);
                     activityBlock.setTask(temp);
                     activityBlock.setBegin(txtFrom.getText().toString());
                     activityBlock.setEnd(txtTo.getText().toString());
@@ -154,7 +157,7 @@ public class NewActivityFragment extends Fragment {
 
         setFromTime(activityBlock.getStartHour(), activityBlock.getStartMinute());
         setToTime(activityBlock.getEndHour(), activityBlock.getEndMinute());
-        checkBoxAlone.setChecked(activityBlock.getTask().getAlone().compareTo(Task.Social.ALONE) == 0);
+        spinnerSocial.setSelection(activityBlock.getTask().getSocial().ordinal());
 
         getActivity().setTitle("Edit Activity");
         btnAdd.setText("Edit");
@@ -162,7 +165,7 @@ public class NewActivityFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 Task temp = (Task) (activityName.getSelectedItem());
-                temp.setAlone(checkBoxAlone.isChecked() ? Task.Social.ALONE : Task.Social.WITH_OTHERS);
+                temp.setSocial(Task.Social.values()[spinnerSocial.getSelectedItemPosition()]);
                 activityBlock.setTask(temp);
                 activityBlock.setBegin(txtFrom.getText().toString());
                 activityBlock.setEnd(txtTo.getText().toString());
@@ -232,8 +235,6 @@ public class NewActivityFragment extends Fragment {
     }
 
     private void navigateBack() {
-        //Intent intent = new Intent(getActivity(), DailyActivities.class);
-        //startActivity(intent);
         getActivity().finish();
     }
 }
