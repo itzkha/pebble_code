@@ -133,7 +133,7 @@ public class MainActivity extends Activity implements CurrentActivityDialog.Noti
                         PebbleKit.sendDataToPebbleWithTransactionId(getApplicationContext(), Constants.WATCHAPP_UUID, data, Constants.STOP_COMMAND);
                     }
                     else {
-                        textViewMessage.setText("Watch is not connected.\nConnect to a Pebble first.\nOr long press for emergency stop.");
+                        textViewMessage.setText("Watch is not connected.\nConnect to a Pebble first.\nOr long press to force stop.");
                     }
                 }
             }
