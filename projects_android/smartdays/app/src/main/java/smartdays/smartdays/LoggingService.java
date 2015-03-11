@@ -51,6 +51,7 @@ public class LoggingService extends Service {
     private static LoggingService instance = null;
     public static Handler serviceMessagesHandler = null;
     private SharedPreferences settings;
+    private String currentActivity;
 
     private NotificationManager notificationManager;
     private int NOTIFICATION = R.string.local_service_started;
@@ -143,7 +144,7 @@ public class LoggingService extends Service {
                 startLoggers(false);
                 startAlarms();
 
-                logActivity(settings.getString("currentActivity", Task.getDefaultTask().getName()), Task.Social.valueOf(settings.getString("currentAlone", Task.Social.NA.toString())));
+                logActivity(settings.getString("currentActivity", Task.getDefaultTask().getName()), Task.Social.valueOf(settings.getString("currentSocial", Task.Social.NA.toString())));
             }
         };
         Calendar calendarTomorrow = Calendar.getInstance();
@@ -329,6 +330,7 @@ public class LoggingService extends Service {
     private void createTimeline() {
         activityTimeline = Timeline.getInstance();
         activityTimeline.resetTimeline();
+        currentActivity = Task.getDefaultTask().getName();
     }
 
     private void startAlarms() {
@@ -350,14 +352,15 @@ public class LoggingService extends Service {
                     activityLabelCounter++;
                     moodLabelCounter++;
 
-                    if (activityLabelCounter >= 10) {                                               // 50 minutes
-                        if (random.nextFloat() < 0.5) {
-                            sendCommand(Constants.ACTIVITY_LABEL_COMMAND);                          // ask for labels (activity)
-                        }
-                    }
-                    else if (moodLabelCounter >= 34) {                                              // 170 minutes
-                        if (random.nextFloat() < 0.5) {
-                            sendCommand(Constants.MOOD_LABEL_COMMAND);                              // ask for labels (mood)
+                    if (currentActivity.compareTo("Personal care") != 0) {                          // avoid prompting during sleeping time
+                        if (activityLabelCounter >= 10) {                                           // 50 minutes
+                            if (random.nextFloat() < 0.5) {
+                                sendCommand(Constants.ACTIVITY_LABEL_COMMAND);                      // ask for labels (activity)
+                            }
+                        } else if (moodLabelCounter >= 34) {                                        // 170 minutes
+                            if (random.nextFloat() < 0.5) {
+                                sendCommand(Constants.MOOD_LABEL_COMMAND);                          // ask for labels (mood)
+                            }
                         }
                     }
 
@@ -617,13 +620,21 @@ public class LoggingService extends Service {
 
             ArrayList<ActivityBlock> activities = Timeline.getInstance().getActivities();
             for (ActivityBlock block : activities) {
-                bufferOutLabelActivity.write(block.getTask().getName().getBytes());
+                bufferOutLabelActivity.write(String.valueOf(block.getBegin().getTime()).getBytes());
                 bufferOutLabelActivity.write(",".getBytes());
                 bufferOutLabelActivity.write(block.getTask().getSocial().toString().getBytes());
                 bufferOutLabelActivity.write(",".getBytes());
-                bufferOutLabelActivity.write(String.valueOf(block.getBegin().getTime()).getBytes());
+                bufferOutLabelActivity.write(block.getTask().getName().getBytes());
                 bufferOutLabelActivity.write("\n".getBytes());
             }
+
+            bufferOutLabelActivity.write(String.valueOf(System.currentTimeMillis()).getBytes());
+            bufferOutLabelActivity.write(",".getBytes());
+            bufferOutLabelActivity.write(Task.Social.ALONE.toString().getBytes());
+            bufferOutLabelActivity.write(",".getBytes());
+            bufferOutLabelActivity.write(Task.getDefaultTask().getName().getBytes());
+            bufferOutLabelActivity.write("\n".getBytes());
+
             bufferOutLabelActivity.flush();
             bufferOutLabelActivity.close();
             Timeline.getInstance().setNeedingWrite(false);
@@ -650,7 +661,7 @@ public class LoggingService extends Service {
         askActivity(Constants.NEW_FILES_COMMAND);
 
         editor.putString("currentActivity", "No activity");
-        editor.putString("currentAlone", Task.Social.NA.toString());
+        editor.putString("currentSocial", Task.Social.NA.toString());
         editor.commit();
         askActivity("No activity");
 
@@ -733,9 +744,10 @@ public class LoggingService extends Service {
 
     private void logActivity(String label, Task.Social alone) {
 
+        currentActivity = label;
         SharedPreferences.Editor editor = settings.edit();
         editor.putString("currentActivity", label);
-        editor.putString("currentAlone", alone.toString());
+        editor.putString("currentSocial", alone.toString());
         editor.commit();
 
         Timestamp now = new Timestamp(System.currentTimeMillis());
