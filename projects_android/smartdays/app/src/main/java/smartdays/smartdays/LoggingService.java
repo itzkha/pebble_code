@@ -620,13 +620,21 @@ public class LoggingService extends Service {
 
             ArrayList<ActivityBlock> activities = Timeline.getInstance().getActivities();
             for (ActivityBlock block : activities) {
-                bufferOutLabelActivity.write(block.getTask().getName().getBytes());
+                bufferOutLabelActivity.write(String.valueOf(block.getBegin().getTime()).getBytes());
                 bufferOutLabelActivity.write(",".getBytes());
                 bufferOutLabelActivity.write(block.getTask().getSocial().toString().getBytes());
                 bufferOutLabelActivity.write(",".getBytes());
-                bufferOutLabelActivity.write(String.valueOf(block.getBegin().getTime()).getBytes());
+                bufferOutLabelActivity.write(block.getTask().getName().getBytes());
                 bufferOutLabelActivity.write("\n".getBytes());
             }
+
+            bufferOutLabelActivity.write(String.valueOf(System.currentTimeMillis()).getBytes());
+            bufferOutLabelActivity.write(",".getBytes());
+            bufferOutLabelActivity.write(Task.Social.ALONE.toString().getBytes());
+            bufferOutLabelActivity.write(",".getBytes());
+            bufferOutLabelActivity.write(Task.getDefaultTask().getName().getBytes());
+            bufferOutLabelActivity.write("\n".getBytes());
+
             bufferOutLabelActivity.flush();
             bufferOutLabelActivity.close();
             Timeline.getInstance().setNeedingWrite(false);
