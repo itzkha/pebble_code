@@ -467,13 +467,13 @@ public class LoggingService extends Service {
             Log.d(Constants.TAG, "Creating activity file...");
             fileName = "activity_" + deviceId + "_" + dateString + ".csv";
             bufferOutLabelActivity = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
-            bufferOutLabelActivity.write(Constants.LABELS_FILE_HEADER.getBytes());
+            bufferOutLabelActivity.write(Constants.ACTIVITY_FILE_HEADER.getBytes());
             editor.putString("activityFileName", fileName);
 
             Log.d(Constants.TAG, "Creating mood file...");
             fileName = "mood_" + deviceId + "_" + dateString + ".csv";
             bufferOutLabelMood = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
-            bufferOutLabelMood.write(Constants.LABELS_FILE_HEADER.getBytes());
+            bufferOutLabelMood.write(Constants.MOOD_FILE_HEADER.getBytes());
             editor.putString("moodFileName", fileName);
 
             Log.d(Constants.TAG, "Creating pebbleAccel file...");
@@ -616,7 +616,7 @@ public class LoggingService extends Service {
         String fileName = settings.getString("activityFileName", "");       // save the labels in the file
         try {
             bufferOutLabelActivity = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
-            bufferOutLabelActivity.write(Constants.LABELS_FILE_HEADER.getBytes());
+            bufferOutLabelActivity.write(Constants.ACTIVITY_FILE_HEADER.getBytes());
 
             ArrayList<ActivityBlock> activities = Timeline.getInstance().getActivities();
             for (ActivityBlock block : activities) {
@@ -773,7 +773,7 @@ public class LoggingService extends Service {
 
     private void logMood(String label) {
         long timestamp = System.currentTimeMillis();
-        String line = label.concat("," + timestamp);
+        String line = String.valueOf(timestamp).concat("," + label + "\n");
 
         try {
             bufferOutLabelMood.write(line.getBytes());

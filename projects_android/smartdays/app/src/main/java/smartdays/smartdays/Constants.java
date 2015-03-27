@@ -35,7 +35,8 @@ public class Constants {
 
     public static final int SERVICE_STOPPED = 43;
 
-    public static final String LABELS_FILE_HEADER = "timestamp,social,label\n";
+    public static final String ACTIVITY_FILE_HEADER = "timestamp,social,label\n";
+    public static final String MOOD_FILE_HEADER = "timestamp,label\n";
     public static final String LOCATION_FILE_HEADER = "timestamp,latitute,longitude,altitute,accuracy,provider\n";
 
     public static final String IP_SERVER = "193.134.218.36:5000";

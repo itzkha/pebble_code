@@ -42,7 +42,7 @@ public class Utils {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         sdf.setTimeZone(TimeZone.getDefault());
         String today = sdf.format(new Date().getTime());
-        return Timestamp.valueOf(today + " " + hourMin + ":00.000000000");
+        return Timestamp.valueOf(today + " " + hourMin + (hourMin.equals(Task.getMaxStoppingTimeString()) ? ":59.000000000" : ":00.000000000"));
     }
 
     /**
