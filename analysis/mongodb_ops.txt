@@ -1,0 +1,12 @@
+db.pebble_accel.ensureIndex({"timestamp":1,"user":1},{unique:true,dropDups:true})
+db.phone_accel.ensureIndex({"timestamp":1,"user":1},{unique:true,dropDups:true})
+db.location.ensureIndex({"timestamp":1,"user":1},{unique:true,dropDups:true})
+db.mood.ensureIndex({"timestamp":1,"user":1},{unique:true,dropDups:true})
+db.activity.ensureIndex({"start":1, "end":1, "user":1}, {unique:true, dropDups:true})
+
+db.activity.ensureIndex({"user":1})
+
+db.pebble_accel.ensureIndex({"user":1})
+db.phone_accel.ensureIndex({"user":1})
+
+db.location.ensureIndex({loc:"2dsphere"})

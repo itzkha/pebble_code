@@ -151,7 +151,8 @@ public class DailyActivitiesFragment extends Fragment {
                 holder.task = (TextView) convertView.findViewById(R.id.txt_task);
                 holder.begin = (TextView) convertView.findViewById(R.id.txt_begin);
                 holder.end = (TextView) convertView.findViewById(R.id.txt_end);
-                holder.img = (ImageView) convertView.findViewById(R.id.edit_image);
+                holder.imageEdit = (ImageView) convertView.findViewById(R.id.edit_image);
+                holder.imageSocial = (ImageView) convertView.findViewById(R.id.imageViewSocial);
                 convertView.setTag(holder);
             }
             else{
@@ -168,11 +169,22 @@ public class DailyActivitiesFragment extends Fragment {
             else {
                 holder.end.setText(currentBlock.getEndingString());
             }
+            switch (currentBlock.getTask().getSocial()) {
+                case ALONE:
+                    holder.imageSocial.setImageResource(R.mipmap.social_alone);
+                    break;
+                case WITH_OTHERS:
+                    holder.imageSocial.setImageResource(R.mipmap.social_with_others);
+                    break;
+                case NA:
+                    holder.imageSocial.setImageResource(R.mipmap.social_na);
+                    break;
+            }
 
             if(!parent.isEditModeOn()) {
-                holder.img.setVisibility(View.VISIBLE);
+                holder.imageEdit.setVisibility(View.VISIBLE);
             } else {
-                holder.img.setVisibility(View.GONE);
+                holder.imageEdit.setVisibility(View.GONE);
             }
 
             int height = currentBlock.getLengthInMinutes();
@@ -196,6 +208,7 @@ public class DailyActivitiesFragment extends Fragment {
 
     static class ViewHolder {
         public TextView task, begin, end;
-        public ImageView img;
+        public ImageView imageEdit;
+        public ImageView imageSocial;
     }
 }

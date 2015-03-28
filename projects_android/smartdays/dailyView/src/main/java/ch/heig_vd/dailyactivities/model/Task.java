@@ -1,14 +1,19 @@
 package ch.heig_vd.dailyactivities.model;
 
+import java.sql.Timestamp;
+
 /**
  * A simple wrapper class for the String class.
  * The only change is to compare the string in a case insensitive manner.
  */
 public class Task {
+    public enum Social {ALONE, WITH_OTHERS, NA}
+
     private String name;
     private String examples;
-    private boolean alone = true;
-    private static final Task DEFAULT_TASK = new Task("No Activity");
+    private Social social = Social.ALONE;
+    private static final Task DEFAULT_TASK = new Task("No activity");
+
 
     /**
      * Creates a new activity from a name.
@@ -17,7 +22,7 @@ public class Task {
     public Task(String name) {
         this.name = name;
         this.examples = "";
-        this.alone = true;
+        this.social = Social.ALONE;
     }
 
     /**
@@ -27,7 +32,7 @@ public class Task {
     public Task(String name, String examples) {
         this.name = name;
         this.examples = examples;
-        this.alone = true;
+        this.social = Social.ALONE;
     }
 
     /**
@@ -46,12 +51,12 @@ public class Task {
         return examples;
     }
 
-    public boolean getAlone() {
-        return alone;
+    public Social getSocial() {
+        return social;
     }
 
-    public void setAlone(boolean alone) {
-        this.alone = alone;
+    public void setSocial(Social social) {
+        this.social = social;
     }
 
     /**
@@ -64,16 +69,24 @@ public class Task {
         if(o == null) {
             return false;
         } else if(o.getClass() == Task.class) {
-            return ((Task)o).name.toLowerCase().equals(name.toLowerCase());
+            return ((Task)o).name.concat(String.valueOf(((Task) o).getSocial())).toLowerCase().equals(name.concat(String.valueOf(social)).toLowerCase());
         }
         return super.equals(o);
     }
 
-    public static String getMinStartingTime() {
+    public static Timestamp getMinStartingTimestamp() {
+        return Utils.createTimestampFromHourMinSec("00:00:00");
+    }
+
+    public static Timestamp getMaxStoppingTimestamp() {
+        return Utils.createTimestampFromHourMinSec("23:59:59");
+    }
+
+    public static String getMinStartingTimeString() {
         return "00:00";
     }
 
-    public static String getMaxStoppingTime() {
+    public static String getMaxStoppingTimeString() {
         return "23:59";
     }
 
@@ -93,4 +106,5 @@ public class Task {
     public String toString() {
         return name;
     }
+
 }

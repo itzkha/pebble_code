@@ -51,6 +51,7 @@ public class LoggingService extends Service {
     private static LoggingService instance = null;
     public static Handler serviceMessagesHandler = null;
     private SharedPreferences settings;
+    private String currentActivity;
 
     private NotificationManager notificationManager;
     private int NOTIFICATION = R.string.local_service_started;
@@ -92,7 +93,8 @@ public class LoggingService extends Service {
 
     private Random random;
     private File appDir;
-    private Timer timer;
+    private Timer timerStop;
+    private Timer timerStart;
 
 
     public static boolean isRunning() {
@@ -119,30 +121,37 @@ public class LoggingService extends Service {
         PowerManager pm = (PowerManager) this.getSystemService(Context.POWER_SERVICE);
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, Constants.TAG);
 
-
-        TimerTask timerTask = new TimerTask() {
+        //------------------------------------------------------------------------------------------
+        TimerTask timerTaskStop = new TimerTask() {
             public void run() {
                 Log.d(Constants.TAG, "Stopping automatically");
                 stopAlarms();
                 stopLoggers();
                 writeActivitiesToFile();
                 closeFiles();
+            }
+        };
+        Calendar calendarToday = Calendar.getInstance();
+        GregorianCalendar gcToday = new GregorianCalendar(calendarToday.get(Calendar.YEAR), calendarToday.get(Calendar.MONTH), calendarToday.get(Calendar.DATE), 23, 59, 59);
+        timerStop = new Timer();
+        timerStop.schedule(timerTaskStop, gcToday.getTime(), 24 * 60 * 60 * 1000);
 
+        TimerTask timerTaskStart = new TimerTask() {
+            public void run() {
                 Log.d(Constants.TAG, "Starting automatically");
                 openFiles();
                 createTimeline();
                 startLoggers(false);
                 startAlarms();
 
-                logLabel(settings.getString("currentActivity", Task.getDefaultTask().getName()), Constants.ACTIVITY_LABEL_COMMAND);
+                logActivity(settings.getString("currentActivity", Task.getDefaultTask().getName()), Task.Social.valueOf(settings.getString("currentSocial", Task.Social.NA.toString())));
             }
         };
-        Calendar calendar = Calendar.getInstance();
-        GregorianCalendar gc = new GregorianCalendar(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DATE), 23, 59, 59);
-//        GregorianCalendar gc = new GregorianCalendar(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DATE), 15, 42, 00);
-        timer = new Timer();
-        timer.schedule(timerTask, gc.getTime(), 24 * 60 * 60 * 1000);
-//        timer.schedule(timerTask, gc.getTime(), 2 * 60 * 1000);
+        Calendar calendarTomorrow = Calendar.getInstance();
+        calendarTomorrow.add(Calendar.DAY_OF_YEAR, 1);
+        GregorianCalendar gcTomorrow = new GregorianCalendar(calendarTomorrow.get(Calendar.YEAR), calendarTomorrow.get(Calendar.MONTH), calendarTomorrow.get(Calendar.DATE), 00, 00, 01);
+        timerStart = new Timer();
+        timerStart.schedule(timerTaskStart, gcTomorrow.getTime(), 24 * 60 * 60 * 1000);
 
         //------------------------------------------------------------------------------------------
         fusedLocationService = new FusedLocationService(getApplicationContext());
@@ -169,6 +178,7 @@ public class LoggingService extends Service {
                 int command = data.getInteger(Constants.COMMAND_KEY).intValue();
                 Log.d(Constants.TAG, "Receiving command: " + String.valueOf(command));
                 String label;
+                String social;
                 switch (command) {
                     case Constants.TIMESTAMP_COMMAND:
                         Log.d(Constants.TAG, "TIMESTAMP received");
@@ -183,14 +193,15 @@ public class LoggingService extends Service {
                         break;
                     case Constants.ACTIVITY_LABEL_COMMAND:
                         label = data.getString(Constants.LABEL_KEY);
-                        Log.d(Constants.TAG, "Received activity label: " + label);
-                        logLabel(label, command);
+                        social = data.getString(Constants.SOCIAL_KEY);
+                        Log.d(Constants.TAG, "Received activity label: " + label + " " + social);
+                        logActivity(label, Task.Social.valueOf(social));
                         askActivity(label);
                         break;
                     case Constants.MOOD_LABEL_COMMAND:
                         label = data.getString(Constants.LABEL_KEY);
                         Log.d(Constants.TAG, "Received mood label: " + label);
-                        logLabel(label, command);
+                        logMood(label);
                         break;
                 }
                 PebbleKit.sendAckToPebble(getApplicationContext(), transactionId);
@@ -300,7 +311,7 @@ public class LoggingService extends Service {
 
                 switch (msg.what) {
                     case Constants.ACTIVITY_LABEL_COMMAND:
-                        logLabel(msg.obj.toString(), Constants.ACTIVITY_LABEL_COMMAND);
+                        logActivity(msg.obj.toString(), Task.Social.values()[msg.arg1]);
                         break;
                     case Constants.UPDATE_ACTIVITY_FILE:
                         writeActivitiesToFile();
@@ -317,13 +328,9 @@ public class LoggingService extends Service {
     }
 
     private void createTimeline() {
-        if (activityTimeline != null) {
-            activityTimeline.removeAllActivities();
-        }
         activityTimeline = Timeline.getInstance();
-        ActivityBlock defaultBlock = new ActivityBlock(new Task(Task.getDefaultTask().getName()), new Timestamp(System.currentTimeMillis()), Task.getMaxStoppingTime());
-        defaultBlock.setUndefinedEnd(true);
-        activityTimeline.addActivity(defaultBlock);
+        activityTimeline.resetTimeline();
+        currentActivity = Task.getDefaultTask().getName();
     }
 
     private void startAlarms() {
@@ -345,14 +352,15 @@ public class LoggingService extends Service {
                     activityLabelCounter++;
                     moodLabelCounter++;
 
-                    if (activityLabelCounter >= 10) {                                               // 50 minutes
-                        if (random.nextFloat() < 0.5) {
-                            sendCommand(Constants.ACTIVITY_LABEL_COMMAND);                          // ask for labels (activity)
-                        }
-                    }
-                    else if (moodLabelCounter >= 34) {                                              // 170 minutes
-                        if (random.nextFloat() < 0.5) {
-                            sendCommand(Constants.MOOD_LABEL_COMMAND);                              // ask for labels (mood)
+                    if (currentActivity.compareTo("Personal care") != 0) {                          // avoid prompting during sleeping time
+                        if (activityLabelCounter >= 10) {                                           // 50 minutes
+                            if (random.nextFloat() < 0.5) {
+                                sendCommand(Constants.ACTIVITY_LABEL_COMMAND);                      // ask for labels (activity)
+                            }
+                        } else if (moodLabelCounter >= 34) {                                        // 170 minutes
+                            if (random.nextFloat() < 0.5) {
+                                sendCommand(Constants.MOOD_LABEL_COMMAND);                          // ask for labels (mood)
+                            }
                         }
                     }
 
@@ -459,13 +467,13 @@ public class LoggingService extends Service {
             Log.d(Constants.TAG, "Creating activity file...");
             fileName = "activity_" + deviceId + "_" + dateString + ".csv";
             bufferOutLabelActivity = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
-            bufferOutLabelActivity.write(Constants.LABELS_FILE_HEADER.getBytes());
+            bufferOutLabelActivity.write(Constants.ACTIVITY_FILE_HEADER.getBytes());
             editor.putString("activityFileName", fileName);
 
             Log.d(Constants.TAG, "Creating mood file...");
             fileName = "mood_" + deviceId + "_" + dateString + ".csv";
             bufferOutLabelMood = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
-            bufferOutLabelMood.write(Constants.LABELS_FILE_HEADER.getBytes());
+            bufferOutLabelMood.write(Constants.MOOD_FILE_HEADER.getBytes());
             editor.putString("moodFileName", fileName);
 
             Log.d(Constants.TAG, "Creating pebbleAccel file...");
@@ -608,15 +616,25 @@ public class LoggingService extends Service {
         String fileName = settings.getString("activityFileName", "");       // save the labels in the file
         try {
             bufferOutLabelActivity = new BufferedOutputStream(new FileOutputStream(new File(appDir, fileName)));
-            bufferOutLabelActivity.write(Constants.LABELS_FILE_HEADER.getBytes());
+            bufferOutLabelActivity.write(Constants.ACTIVITY_FILE_HEADER.getBytes());
 
             ArrayList<ActivityBlock> activities = Timeline.getInstance().getActivities();
             for (ActivityBlock block : activities) {
-                bufferOutLabelActivity.write(block.getTask().getName().getBytes());
-                bufferOutLabelActivity.write(",".getBytes());
                 bufferOutLabelActivity.write(String.valueOf(block.getBegin().getTime()).getBytes());
+                bufferOutLabelActivity.write(",".getBytes());
+                bufferOutLabelActivity.write(block.getTask().getSocial().toString().getBytes());
+                bufferOutLabelActivity.write(",".getBytes());
+                bufferOutLabelActivity.write(block.getTask().getName().getBytes());
                 bufferOutLabelActivity.write("\n".getBytes());
             }
+
+            bufferOutLabelActivity.write(String.valueOf(System.currentTimeMillis()).getBytes());
+            bufferOutLabelActivity.write(",".getBytes());
+            bufferOutLabelActivity.write(Task.Social.ALONE.toString().getBytes());
+            bufferOutLabelActivity.write(",".getBytes());
+            bufferOutLabelActivity.write(Task.getDefaultTask().getName().getBytes());
+            bufferOutLabelActivity.write("\n".getBytes());
+
             bufferOutLabelActivity.flush();
             bufferOutLabelActivity.close();
             Timeline.getInstance().setNeedingWrite(false);
@@ -643,10 +661,11 @@ public class LoggingService extends Service {
         askActivity(Constants.NEW_FILES_COMMAND);
 
         editor.putString("currentActivity", "No activity");
+        editor.putString("currentSocial", Task.Social.NA.toString());
         editor.commit();
         askActivity("No activity");
 
-        Timeline.getInstance().removeAllActivities();
+        Timeline.getInstance().resetTimeline();
 
         fusedLocationService.stop();
 
@@ -723,42 +742,45 @@ public class LoggingService extends Service {
         }
     }
 
-    private void logLabel(String label, int command) {
-        try {
-            long timestamp = System.currentTimeMillis();
-            String line = label.concat("," + timestamp);
+    private void logActivity(String label, Task.Social alone) {
 
-            switch (command) {
-                case Constants.ACTIVITY_LABEL_COMMAND:
-                    SharedPreferences.Editor editor = settings.edit();
-                    editor.putString("currentActivity", label);
-                    editor.commit();
+        currentActivity = label;
+        SharedPreferences.Editor editor = settings.edit();
+        editor.putString("currentActivity", label);
+        editor.putString("currentSocial", alone.toString());
+        editor.commit();
 
-                    Timestamp now = new Timestamp(timestamp);
-                    Timestamp end = null;
-                    for (ActivityBlock block : activityTimeline.getActivities()) {                  // find the end of this label
-                        if ( (now.compareTo(block.getBegin()) >= 0)  && (now.compareTo(block.getEnd()) <= 0) ) {
-                            end = new Timestamp(block.getEnd().getTime());
-                            break;
-                        }
-                    }
-                    ActivityBlock newBlock = new ActivityBlock(new Task(label), now, end);
-                    newBlock.setUndefinedEnd(true);
-                    activityTimeline.addActivity(newBlock);
-                    activityLabelCounter = 0;
-                    writeActivitiesToFile();
-                    break;
-
-                case Constants.MOOD_LABEL_COMMAND:
-                    bufferOutLabelMood.write(line.getBytes());
-                    bufferOutLabelMood.flush();
-                    moodLabelCounter = 0;
-                    break;
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        Timestamp end = null;
+        for (ActivityBlock block : activityTimeline.getActivities()) {                  // find the end of this label
+            Log.d(Constants.TAG, "Now: " + now.toString() + " block begin: " + block.getBegin().toString() + " block end: " + block.getEnd().toString());
+            if ( (now.compareTo(block.getBegin()) >= 0)  && (now.compareTo(block.getEnd()) <= 0) ) {
+                end = new Timestamp(block.getEnd().getTime());
+                break;
             }
+        }
 
+        if (end != null) {
+            Task temp = new Task(label);
+            temp.setSocial(alone);
+            ActivityBlock newBlock = new ActivityBlock(temp, now, end);
+            newBlock.setUndefinedEnd(true);
+            activityTimeline.addActivity(newBlock);
+            activityLabelCounter = 0;
+            writeActivitiesToFile();
         }
-        catch (IOException ioe) {
+    }
+
+    private void logMood(String label) {
+        long timestamp = System.currentTimeMillis();
+        String line = String.valueOf(timestamp).concat("," + label + "\n");
+
+        try {
+            bufferOutLabelMood.write(line.getBytes());
+            bufferOutLabelMood.flush();
+            moodLabelCounter = 0;
         }
+        catch (IOException ioe) {}
     }
 
 }

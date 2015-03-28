@@ -3,8 +3,8 @@
   "shortName": "smartdays",
   "longName": "smartdays",
   "companyName": "HEIG-VD",
-  "versionCode": 1,
-  "versionLabel": "1.0",
+  "versionCode": 2,
+  "versionLabel": "0.2",
   "watchapp": {
     "watchface": false
   },
@@ -52,6 +52,16 @@
         "type": "png",
         "name": "UPSET",
         "file": "upset_pulse_32x32.png"
+      },
+      {
+        "type": "png",
+        "name": "ALONE",
+        "file": "socialAlone.png"
+      },
+      {
+        "type": "png",
+        "name": "WITHOTHERS",
+        "file": "socialWithOthers.png"
       }
     ]
   }

@@ -3,7 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:orientation="vertical" android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:focusable="false">
+    android:background="@drawable/activities_list_background"
+    >
 
     <LinearLayout
         android:orientation="horizontal"
@@ -14,27 +15,24 @@
             android:id="@+id/textActivityLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:background="@drawable/activities_list_background"
+            android:background="#00ffffff"
             android:textAppearance="?android:attr/textAppearanceListItemSmall"
             android:gravity="center_vertical"
             android:minHeight="?android:attr/listPreferredItemHeightSmall"
             android:layout_weight="1" />
 
-        <CheckBox
-            android:layout_width="100dp"
-            android:layout_height="fill_parent"
-            android:background="@drawable/activities_list_background"
-            android:text="alone"
-            android:id="@+id/checkBoxAlone"
-            android:checked="true"
-            android:focusable="false"
-            android:focusableInTouchMode="false" />
+        <Spinner
+            android:layout_width="150dp"
+            android:layout_height="wrap_content"
+            android:id="@+id/spinnerSocial"
+            android:spinnerMode="dropdown" />
+
     </LinearLayout>
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/activities_list_background"
+        android:background="#00ffffff"
         android:textAppearance="?android:attr/textAppearanceSmall"
         android:id="@+id/textActivityExamples" />
 

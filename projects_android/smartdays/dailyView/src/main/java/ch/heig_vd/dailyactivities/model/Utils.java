@@ -42,7 +42,19 @@ public class Utils {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         sdf.setTimeZone(TimeZone.getDefault());
         String today = sdf.format(new Date().getTime());
-        return Timestamp.valueOf(today + " " + hourMin + ":00.000000000");
+        return Timestamp.valueOf(today + " " + hourMin + (hourMin.equals(Task.getMaxStoppingTimeString()) ? ":59.000000000" : ":00.000000000"));
+    }
+
+    /**
+     * Creates and returns a timestamp from given HH:mm:ss string by adding the today date.
+     * @param hourMinSec a HH:mm:ss string
+     * @return a timestamp from given HH:mm:ss string by adding the today date
+     */
+    public static Timestamp createTimestampFromHourMinSec(String hourMinSec) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        sdf.setTimeZone(TimeZone.getDefault());
+        String today = sdf.format(new Date().getTime());
+        return Timestamp.valueOf(today + " " + hourMinSec + ".000000000");
     }
 
     /**

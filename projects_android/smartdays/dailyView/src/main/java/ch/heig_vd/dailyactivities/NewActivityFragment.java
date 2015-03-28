@@ -1,6 +1,5 @@
 package ch.heig_vd.dailyactivities;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.TimePickerDialog;
 import android.content.DialogInterface;
@@ -34,6 +33,7 @@ public class NewActivityFragment extends Fragment {
     private TextView txtFrom;
     private TextView txtTo;
     private Button btnAdd;
+    private Spinner spinnerSocial;
 
     public NewActivityFragment() {
     }
@@ -48,6 +48,7 @@ public class NewActivityFragment extends Fragment {
         txtFrom = (TextView) rootView.findViewById(R.id.txt_from);
         txtTo = (TextView) rootView.findViewById(R.id.txt_to);
         btnAdd = (Button) rootView.findViewById(R.id.btn_add_activity);
+        spinnerSocial = (Spinner) rootView.findViewById(R.id.spinnerSocial);
 
         ArrayList<Task> activities = Timeline.getInstance().getAvailableActivities();
         if (activities == null ) {
@@ -55,17 +56,24 @@ public class NewActivityFragment extends Fragment {
             activities.add(Task.getDefaultTask());
         }
 
-        txtFrom.setText(Task.getMinStartingTime());
-        txtTo.setText(Task.getMaxStoppingTime());
+        txtFrom.setText(Task.getMinStartingTimeString());
+        txtTo.setText(Task.getMaxStoppingTimeString());
         activityBlock = new ActivityBlock(new Task(""), txtFrom.getText().toString(), txtTo.getText().toString());
 
         // Create an ArrayAdapter using the task array and a default spinner layout
         ArrayAdapter<Task> adapter = new ArrayAdapter(getActivity(), R.layout.spinner_item_activity, activities);
-
         // Specify the layout to use when the list of choices appears
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         // Apply the adapter to the spinner
         activityName.setAdapter(adapter);
+
+        ArrayList<String> socialArray = new ArrayList<String>(3);
+        socialArray.add("Alone");
+        socialArray.add("With others");
+        socialArray.add("NA");
+        ArrayAdapter<Task.Social> adapterSocial = new ArrayAdapter(getActivity(), R.layout.spinner_item_social_large, socialArray);
+        adapterSocial.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerSocial.setAdapter(adapterSocial);
 
         final TimePickerDialog.OnTimeSetListener timePickerListener =
                 new TimePickerDialog.OnTimeSetListener() {
@@ -111,7 +119,9 @@ public class NewActivityFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 if(checkActivityBlock()) {
-                    activityBlock.setTask((Task) (activityName.getSelectedItem()));
+                    Task temp = (Task) activityName.getSelectedItem();
+                    temp.setSocial(Task.Social.values()[spinnerSocial.getSelectedItemPosition()]);
+                    activityBlock.setTask(temp);
                     activityBlock.setBegin(txtFrom.getText().toString());
                     activityBlock.setEnd(txtTo.getText().toString());
                     Timeline.getInstance().addActivity(activityBlock);
@@ -135,7 +145,7 @@ public class NewActivityFragment extends Fragment {
         boolean found = false;
         int max = activityName.getAdapter().getCount();
         for(int i = 0; i < max; i++) {
-            if(activityName.getItemAtPosition(i).equals(activityBlock.getTask())) {
+            if(activityName.getItemAtPosition(i).toString().equals(activityBlock.getTask().toString())) {
                 activityName.setSelection(i);
                 found = true;
             }
@@ -147,13 +157,16 @@ public class NewActivityFragment extends Fragment {
 
         setFromTime(activityBlock.getStartHour(), activityBlock.getStartMinute());
         setToTime(activityBlock.getEndHour(), activityBlock.getEndMinute());
+        spinnerSocial.setSelection(activityBlock.getTask().getSocial().ordinal());
 
         getActivity().setTitle("Edit Activity");
         btnAdd.setText("Edit");
         btnAdd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                activityBlock.setTask((Task) (activityName.getSelectedItem()));
+                Task temp = (Task) (activityName.getSelectedItem());
+                temp.setSocial(Task.Social.values()[spinnerSocial.getSelectedItemPosition()]);
+                activityBlock.setTask(temp);
                 activityBlock.setBegin(txtFrom.getText().toString());
                 activityBlock.setEnd(txtTo.getText().toString());
                 if(!oldActivityBlock.equals(activityBlock)) {
@@ -222,8 +235,6 @@ public class NewActivityFragment extends Fragment {
     }
 
     private void navigateBack() {
-        //Intent intent = new Intent(getActivity(), DailyActivities.class);
-        //startActivity(intent);
         getActivity().finish();
     }
 }
