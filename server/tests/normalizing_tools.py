@@ -114,7 +114,7 @@ def read_user_timeline(user_code):
     return activities_all
 
 
-def create_activity_matrix(activity_list):
+def create_activity_matrix(activity_list, activities_unique):
     activities_merged = pd.DataFrame(columns = ["timestamp", "social", "label", "date"])
 
     for this_timeline in activity_list:
@@ -122,7 +122,8 @@ def create_activity_matrix(activity_list):
     activities_merged = activities_merged.sort(columns=["timestamp"])
 
     lencoder = sklearn.preprocessing.LabelEncoder()
-    lencoder.fit(np.unique(activities_merged["label"]))
+#    lencoder.fit(np.unique(activities_merged["label"]))
+    lencoder.fit(activities_unique)
 
     activities_index = lencoder.transform(activities_merged["label"])
 
@@ -133,7 +134,7 @@ def create_activity_matrix(activity_list):
     first_minute = time.mktime(datetime.strptime(first_minute_datetime, "%Y-%m-%d %H:%M:%S").timetuple()) / 60
     last_minute = time.mktime(datetime.strptime(last_minute_datetime, "%Y-%m-%d %H:%M:%S").timetuple()) / 60
 
-    activity_matrix = np.zeros((int(last_minute - first_minute) + 1, max(activities_index)+1), dtype=np.int)
+    activity_matrix = np.zeros((int(last_minute - first_minute) + 1, len(activities_unique)), dtype=np.int)
     for this_timeline in activity_list:
         minutes = np.round((this_timeline["timestamp"].values / (1000*60)) - first_minute)
         this_activities_index = lencoder.transform(this_timeline["label"])
@@ -141,7 +142,8 @@ def create_activity_matrix(activity_list):
             if this_timeline["label"][i] != "No activity":
                 activity_matrix[int(t):int(tnext), this_activities_index[i]] = True
 
-    return (activity_matrix, np.unique(activities_merged["label"].values))
+    activity_matrix = np.delete(activity_matrix, (activities_unique.index("No activity")), axis=1)
+    return activity_matrix
 
 def decode_mood_line(line):
     to_return = pd.DataFrame(columns=["timestamp", "label"])
